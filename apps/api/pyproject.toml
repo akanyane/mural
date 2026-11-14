@@ -1,0 +1,23 @@
+[project]
+name = "posts-api"
+version = "0.2.0"
+description = "API de posts com autenticação JWT e votos (FastAPI + SQLite)."
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.20.1",
+    "bcrypt>=5.0.0",
+    "fastapi>=0.163.0",
+    "posts-schemas",
+    "pydantic-settings>=2.16.3",
+    "pyjwt>=2.15.1",
+    "python-multipart>=0.0.33",
+    "sqlalchemy>=2.1.8",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[tool.uv.sources]
+posts-schemas = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.12"]
+build-backend = "uv_build"
