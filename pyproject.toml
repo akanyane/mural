@@ -1,0 +1,30 @@
+# Raiz do monorepo: um workspace uv "virtual" (sem [project] próprio).
+# Cada app/pacote tem seu pyproject; todos compartilham um único uv.lock.
+[tool.uv.workspace]
+members = ["apps/*", "packages/*"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.5",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["apps/api/tests", "apps/web/tests", "tests"]
+pythonpath = ["apps/web/tests"]
+addopts = ["-ra", "--import-mode=importlib"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["posts_api", "posts_web", "posts_schemas"]
+known-third-party = ["alembic"]
+
+[tool.ruff.lint.flake8-bugbear]
+# Depends()/Query()/Form() em defaults é o padrão do FastAPI.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Form"]
