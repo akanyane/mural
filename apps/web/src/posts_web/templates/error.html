@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% import "partials/icons.html" as icon %}
+{% block title %}Ops · Mural{% endblock %}
+{% block content %}
+<section class="card empty-state error-state">
+  <div class="empty-icon">{{ icon.alert() }}</div>
+  <h1>Ops, algo deu errado</h1>
+  <p class="muted">{{ message }}</p>
+  <a href="/" class="btn btn-primary">Voltar para o mural</a>
+</section>
+{% endblock %}

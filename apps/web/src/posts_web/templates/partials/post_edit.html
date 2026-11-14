@@ -1,0 +1,19 @@
+<article id="post-{{ post.id }}" class="post card is-editing">
+  <form hx-put="/posts/{{ post.id }}" hx-target="#post-{{ post.id }}" hx-swap="outerHTML">
+    <span class="editing-label">Editando post</span>
+    <input class="composer-title" name="title" value="{{ post.title }}" aria-label="Título" required maxlength="200" autocomplete="off">
+    <textarea class="composer-body" name="content" aria-label="Conteúdo" rows="3" required>{{ post.content }}</textarea>
+    <div class="composer-footer">
+      <label class="switch">
+        <input type="checkbox" name="published" value="true" {% if post.published %}checked{% endif %}>
+        <span class="switch-track" aria-hidden="true"></span>
+        <span>Publicado</span>
+      </label>
+      <div class="composer-submit">
+        <button type="button" class="btn btn-ghost"
+                hx-get="/posts/{{ post.id }}" hx-target="#post-{{ post.id }}" hx-swap="outerHTML">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </div>
+  </form>
+</article>

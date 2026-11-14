@@ -1,0 +1,1 @@
+<span class="avatar{% if size %} avatar-{{ size }}{% endif %}" style="--hue: {{ email | avatar_hue }}" aria-hidden="true">{{ (email | handle)[:1] | upper }}</span>

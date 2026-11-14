@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% import "partials/icons.html" as icon %}
+{% block content %}
+<section class="composer card">
+  <form hx-post="/posts" hx-target="#posts" hx-swap="afterbegin"
+        hx-on::after-request="if (event.detail.successful) this.reset()">
+    <div class="composer-row">
+      {% with email = me.email %}{% include "partials/avatar.html" %}{% endwith %}
+      <div class="composer-fields">
+        <input class="composer-title" name="title" placeholder="Dê um título ao seu post" aria-label="Título"
+               required maxlength="200" autocomplete="off">
+        <textarea class="composer-body" name="content" rows="2" required aria-label="Conteúdo"
+                  placeholder="No que você está pensando, {{ me.email | handle }}?"></textarea>
+      </div>
+    </div>
+    <div class="composer-footer">
+      <label class="switch">
+        <input type="checkbox" name="published" value="true" checked>
+        <span class="switch-track" aria-hidden="true"></span>
+        <span>Publicado</span>
+      </label>
+      <div class="composer-submit">
+        <span class="kbd-hint" aria-hidden="true"><kbd>Ctrl</kbd><kbd>↵</kbd></span>
+        <button type="submit" class="btn btn-primary">{{ icon.sparkle() }}<span>Publicar</span></button>
+      </div>
+    </div>
+  </form>
+</section>
+
+<div class="feed-toolbar">
+  <h1 class="feed-title">Últimos posts</h1>
+  <label class="search">
+    {{ icon.search() }}
+    <input type="search" name="search" value="{{ search }}" placeholder="Buscar por título…" aria-label="Buscar por título"
+           hx-get="/posts" hx-trigger="input changed delay:300ms, search" hx-target="#posts">
+  </label>
+</div>
+
+<section id="posts" class="feed">
+  {% include "partials/post_list.html" %}
+</section>
+{% endblock %}
