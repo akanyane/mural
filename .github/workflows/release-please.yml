@@ -1,0 +1,46 @@
+name: release-please
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      pr: ${{ steps.release.outputs.pr }}
+    steps:
+      - uses: googleapis/release-please-action@v5
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  # O release-please sobe a versão nos pyproject.toml, mas não no uv.lock (que
+  # também guarda a versão de cada membro do workspace). Este job sincroniza o
+  # lock direto no branch do PR de release, para o `uv lock --check` continuar ok.
+  sync-uv-lock:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.pr }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ fromJSON(needs.release-please.outputs.pr).headBranchName }}
+      - uses: astral-sh/setup-uv@v10
+      - run: uv lock
+      - name: Commit uv.lock
+        run: |
+          if git diff --quiet uv.lock; then
+            echo "uv.lock já está em dia"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore: sync uv.lock with release versions"
+          git push
