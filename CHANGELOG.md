@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.5.0](https://github.com/akanyane/mural/compare/v0.4.0...v0.5.0) (2026-11-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* **api:** access tokens are opaque session tokens instead of JWTs; tokens issued before this release stop working, so everyone has to log in again. Public user payloads no longer contain "email".
+* **schemas:** post/comment "owner" and profile "user" no longer include "email".
+
+### Features
+
+* **api:** server-side sessions and a separate profiles table ([bda9405](https://github.com/akanyane/mural/commit/bda94050e2187370986ec422abfd2d06b7636195))
+* **schemas:** public profiles, profile edits and session models ([e7e17bc](https://github.com/akanyane/mural/commit/e7e17bcf813775266705d486a9076b59a73eb2fd))
+* server-side sessions, profiles table and profile editing ([363681b](https://github.com/akanyane/mural/commit/363681be02e515f2bc00155bb4ab1644c93a0752))
+* **web:** persistent login, active sessions page and profile editing ([2db811b](https://github.com/akanyane/mural/commit/2db811bb48198ac45b220efb4ec336b79d4e4152))
+
 ## [0.4.0](https://github.com/akanyane/mural/compare/v0.3.0...v0.4.0) (2026-11-15)
 
 
