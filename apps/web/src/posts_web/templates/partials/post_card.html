@@ -6,7 +6,7 @@
       {%- with name = post.owner.username %}{% include "partials/avatar.html" %}{% endwith -%}
     </a>
     <div class="post-meta">
-      <a href="/u/{{ post.owner.username }}" class="post-author">{{ post.owner.username }}</a>
+      <a href="/u/{{ post.owner.username }}" class="post-author">{{ post.owner.display_name or post.owner.username }}</a>
       <span class="post-sub">
         <span class="post-handle">@{{ post.owner.username }} · </span><time datetime="{{ post.created_at.isoformat() }}" title="{{ post.created_at | datetime }}">{{ post.created_at | timeago }}</time>
       </span>

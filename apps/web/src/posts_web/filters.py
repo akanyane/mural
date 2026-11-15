@@ -34,6 +34,34 @@ def timeago(value: datetime, now: datetime | None = None) -> str:
     return _as_utc(value).strftime("%d/%m/%Y")
 
 
+def device_name(user_agent: str | None) -> str:
+    """Nome amigável do dispositivo a partir do User-Agent: "Chrome · Windows"."""
+    if not user_agent:
+        return "Dispositivo desconhecido"
+    ua = user_agent
+    browsers = [
+        ("Edg/", "Edge"),
+        ("OPR/", "Opera"),
+        ("Firefox/", "Firefox"),
+        ("Chrome/", "Chrome"),
+        ("Safari/", "Safari"),
+    ]
+    systems = [
+        ("iPhone", "iPhone"),
+        ("iPad", "iPad"),
+        ("Android", "Android"),
+        ("Windows", "Windows"),
+        ("Mac OS X", "macOS"),
+        ("CrOS", "ChromeOS"),
+        ("Linux", "Linux"),
+    ]
+    browser = next((name for token, name in browsers if token in ua), None)
+    system = next((name for token, name in systems if token in ua), None)
+    if browser is None and system is None:
+        return ua.split("/")[0][:40] or "Dispositivo desconhecido"
+    return " · ".join(part for part in (browser, system) if part)
+
+
 def avatar_hue(name: str) -> int:
     """Cor estável por usuário (0-359), derivada do nome de usuário."""
     return int(hashlib.md5(name.lower().encode()).hexdigest(), 16) % 360

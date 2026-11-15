@@ -72,7 +72,8 @@ def test_register_duplicate_email_shows_api_message(client, api):
     assert "Já existe uma conta com esse email." in response.text
 
 
-def test_logout_clears_cookie(logged_client):
+def test_logout_clears_cookie(logged_client, api):
+    api.on("POST", "/logout", status=204)
     response = logged_client.post("/logout")
 
     assert response.status_code == 303

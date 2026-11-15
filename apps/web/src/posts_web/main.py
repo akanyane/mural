@@ -1,5 +1,5 @@
 import asyncio
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from typing import Annotated
 
@@ -9,7 +9,14 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from posts_schemas import PostCreate, PostOut, PostUpdate, normalize_username, username_error
+from posts_schemas import (
+    PostCreate,
+    PostOut,
+    PostUpdate,
+    ProfileUpdate,
+    normalize_username,
+    username_error,
+)
 
 from . import filters
 from .api_client import ApiClient, ApiError
@@ -37,6 +44,7 @@ templates.env.filters.update(
     date=filters.date_only,
     timeago=filters.timeago,
     avatar_hue=filters.avatar_hue,
+    device=filters.device_name,
 )
 
 
@@ -84,11 +92,21 @@ def set_session(response: Response, token: str) -> Response:
     response.set_cookie(
         SESSION_COOKIE,
         token,
+        max_age=settings.session_cookie_days * 86400,  # sobrevive ao fechar o navegador
         httponly=True,  # o JavaScript da página nunca vê o token
         samesite="lax",  # o cookie não vai em POST/PUT/DELETE vindos de outros sites
         secure=settings.cookie_secure,
     )
     return response
+
+
+def client_info(request: Request) -> dict:
+    """Navegador e IP de quem está logando, para a lista de sessões."""
+    forwarded = request.headers.get("x-forwarded-for")
+    ip = forwarded.split(",")[0].strip() if forwarded else None
+    if ip is None and request.client:
+        ip = request.client.host
+    return {"user_agent": request.headers.get("user-agent"), "ip": ip}
 
 
 def next_skip(posts: list[PostOut], skip: int) -> int | None:
@@ -136,7 +154,7 @@ async def login(
 ):
     """Entra com email ou nome de usuário (a API decide pelo "@")."""
     try:
-        token = await api.login(login, password)
+        token = await api.login(login, password, **client_info(request))
     except ApiError as exc:
         if exc.status_code not in (403, 422):
             raise
@@ -187,15 +205,19 @@ async def register(
         else:
             message = exc.detail
         return _register_error(request, message, exc.status_code, email, username)
-    token = await api.login(email, password)
+    token = await api.login(email, password, **client_info(request))
     return set_session(redirect(request, "/"), token)
 
 
 @app.get("/register/check-username", response_class=HTMLResponse)
-async def check_username(request: Request, api: Api, username: str = ""):
-    """Fragmento HTMX com a disponibilidade do nome, enquanto a pessoa digita."""
+async def check_username(request: Request, api: Api, username: str = "", current: str = ""):
+    """Fragmento HTMX com a disponibilidade do nome, enquanto a pessoa digita.
+
+    `current` é o nome atual de quem está editando o perfil (manter o próprio nome
+    não é "nome em uso").
+    """
     normalized = normalize_username(username)
-    if not normalized:
+    if not normalized or normalized == normalize_username(current):
         return HTMLResponse("")
     if error := username_error(normalized):
         result = {"username": normalized, "available": False, "reason": error}
@@ -205,7 +227,12 @@ async def check_username(request: Request, api: Api, username: str = ""):
 
 
 @app.post("/logout")
-async def logout(request: Request):
+async def logout(request: Request, api: Api):
+    # Revoga a sessão no servidor (o token deixa de valer na hora) e só então apaga
+    # o cookie. Se a sessão já não existia ou a API não responde, sai mesmo assim.
+    if api.token:
+        with suppress(ApiError, httpx2.TransportError):
+            await api.logout()
     response = redirect(request, "/login")
     response.delete_cookie(SESSION_COOKIE)
     return response
@@ -464,6 +491,77 @@ async def followers_page(request: Request, api: Api, username: str, skip: int = 
 @app.get("/u/{username}/seguindo", response_class=HTMLResponse)
 async def following_page(request: Request, api: Api, username: str, skip: int = 0):
     return await _follow_list(request, api, username, "seguindo", skip)
+
+
+# --- sessões e perfil -------------------------------------------------------------------
+
+
+@app.get("/sessoes", response_class=HTMLResponse)
+async def sessions_page(request: Request, api: Api, revoked: int | None = None):
+    if api.token is None:
+        return redirect(request, "/login")
+    me, sessions = await asyncio.gather(api.me(), api.sessions())
+    return templates.TemplateResponse(
+        request, "sessions.html", {"me": me, "sessions": sessions, "revoked": revoked}
+    )
+
+
+@app.delete("/sessoes/{session_id}", response_class=HTMLResponse)
+async def revoke_session(api: Api, session_id: int):
+    await api.revoke_session(session_id)
+    return HTMLResponse("")  # a linha some da lista (swap outerHTML)
+
+
+@app.post("/sessoes/encerrar-outras")
+async def revoke_other_sessions(request: Request, api: Api):
+    revoked = await api.revoke_other_sessions()
+    return redirect(request, f"/sessoes?revoked={revoked}")
+
+
+@app.get("/perfil/editar", response_class=HTMLResponse)
+async def edit_profile_page(request: Request, api: Api):
+    if api.token is None:
+        return redirect(request, "/login")
+    me = await api.me()
+    return templates.TemplateResponse(
+        request,
+        "profile_edit.html",
+        {
+            "me": me,
+            "username": me.username,
+            "display_name": me.display_name or "",
+            "bio": me.bio or "",
+        },
+    )
+
+
+@app.post("/perfil/editar")
+async def edit_profile(
+    request: Request,
+    api: Api,
+    username: Annotated[str, Form()],
+    display_name: Annotated[str, Form()] = "",
+    bio: Annotated[str, Form()] = "",
+):
+    me = await api.me()
+    form = {"me": me, "username": username, "display_name": display_name, "bio": bio}
+    username = normalize_username(username)
+    if error := username_error(username):
+        return templates.TemplateResponse(
+            request, "profile_edit.html", {**form, "error": error}, status_code=422
+        )
+    try:
+        updated = await api.update_profile(
+            ProfileUpdate(username=username, display_name=display_name, bio=bio)
+        )
+    except ApiError as exc:
+        if exc.status_code not in (409, 422):
+            raise
+        message = "Esse nome de usuário já está em uso." if exc.status_code == 409 else exc.detail
+        return templates.TemplateResponse(
+            request, "profile_edit.html", {**form, "error": message}, status_code=exc.status_code
+        )
+    return redirect(request, f"/u/{updated.username}")
 
 
 @app.get("/healthz")

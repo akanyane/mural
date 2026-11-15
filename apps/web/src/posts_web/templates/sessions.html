@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% import "partials/icons.html" as icon %}
+{% block title %}Sessões ativas · Mural{% endblock %}
+{% block content %}
+<a href="/u/{{ me.username }}" class="back-link">← @{{ me.username }}</a>
+<section class="card sessions">
+  <header class="sessions-head">
+    <div>
+      <h1>{{ icon.shield() }} Sessões ativas</h1>
+      <p class="muted">Lugares onde sua conta está conectada. Encerrar uma sessão desconecta aquele dispositivo na hora.</p>
+    </div>
+  </header>
+
+  {% if revoked is not none %}
+    <p class="notice" role="status">
+      {% if revoked == 0 %}Não havia outras sessões abertas.{% elif revoked == 1 %}1 sessão encerrada.{% else %}{{ revoked }} sessões encerradas.{% endif %}
+    </p>
+  {% endif %}
+
+  <ul class="session-list">
+    {% for s in sessions | sort(attribute="current", reverse=True) %}
+      {% set device = s.user_agent | device %}
+      <li id="session-{{ s.id }}" class="session-row{% if s.current %} is-current{% endif %}" style="--i: {{ loop.index0 }}">
+        <span class="session-icon">{% if "iPhone" in device or "Android" in device %}{{ icon.phone() }}{% else %}{{ icon.monitor() }}{% endif %}</span>
+        <div class="session-info">
+          <strong>{{ device }}</strong>
+          {% if s.current %}<span class="badge badge-accent">este dispositivo</span>{% endif %}
+          <span class="mono">
+            {% if s.ip_address %}{{ s.ip_address }} · {% endif %}ativa {{ s.last_used_at | timeago }} · desde {{ s.created_at | date }}
+          </span>
+        </div>
+        {% if s.current %}
+          <form method="post" action="/logout" class="inline">
+            <button type="submit" class="btn btn-ghost btn-sm">Sair</button>
+          </form>
+        {% else %}
+          <button class="btn btn-ghost btn-sm btn-danger"
+                  hx-delete="/sessoes/{{ s.id }}" hx-target="#session-{{ s.id }}" hx-swap="outerHTML swap:300ms"
+                  hx-confirm="Encerrar a sessão em {{ device }}?">Encerrar</button>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+
+  {% if sessions | length > 1 %}
+    <form method="post" action="/sessoes/encerrar-outras" class="sessions-footer"
+          onsubmit="return confirm('Sair de todos os outros dispositivos?')">
+      <button type="submit" class="btn btn-primary">Sair de todas as outras sessões</button>
+    </form>
+  {% endif %}
+</section>
+{% endblock %}
