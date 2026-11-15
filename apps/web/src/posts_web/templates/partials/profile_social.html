@@ -1,0 +1,25 @@
+{#- Contagens de seguidores/seguindo + botão de seguir. Trocado inteiro (outerHTML)
+    a cada seguir/deixar de seguir. -#}
+{% set u = profile.user.username %}
+<div id="profile-social" class="profile-social">
+  <div class="follow-counts">
+    <a href="/u/{{ u }}/seguidores"><strong class="count{% if toggled %} bump{% endif %}">{{ profile.followers }}</strong> {{ "seguidor" if profile.followers == 1 else "seguidores" }}</a>
+    <a href="/u/{{ u }}/seguindo"><strong class="count">{{ profile.following }}</strong> seguindo</a>
+    {% if profile.follows_you %}<span class="badge">segue você</span>{% endif %}
+  </div>
+  {% if me and me.id != profile.user.id %}
+    {% if profile.is_following %}
+      <button class="btn btn-follow is-following{% if toggled %} pop{% endif %}"
+              hx-delete="/u/{{ u }}/follow" hx-target="#profile-social" hx-swap="outerHTML" hx-disabled-elt="this"
+              aria-pressed="true" aria-label="Deixar de seguir {{ u }}">
+        <span class="when-idle">✓ Seguindo</span><span class="when-hover">Deixar de seguir</span>
+      </button>
+    {% else %}
+      <button class="btn btn-primary btn-follow{% if toggled %} pop{% endif %}"
+              hx-put="/u/{{ u }}/follow" hx-target="#profile-social" hx-swap="outerHTML" hx-disabled-elt="this"
+              aria-pressed="false" aria-label="Seguir {{ u }}">
+        + {{ "Seguir de volta" if profile.follows_you else "Seguir" }}
+      </button>
+    {% endif %}
+  {% endif %}
+</div>

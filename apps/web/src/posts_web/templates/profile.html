@@ -11,6 +11,7 @@
       <p class="mono">membro desde {{ profile.user.created_at | date }}</p>
     </div>
   </div>
+  {% include "partials/profile_social.html" %}
   <dl class="stats">
     <div class="stat"><dt>Posts</dt><dd>{{ profile.posts }}</dd></div>
     <div class="stat"><dt>Votos recebidos</dt><dd>{{ profile.votes_received }}</dd></div>

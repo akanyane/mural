@@ -1,0 +1,27 @@
+{% for user in users %}
+  <li class="user-row" style="--i: {{ loop.index0 }}">
+    <a href="/u/{{ user.username }}" class="user-link">
+      {% with name = user.username %}{% include "partials/avatar.html" %}{% endwith %}
+      <span class="user-names">
+        <strong>{{ user.username }}</strong>
+        <span class="mono">membro desde {{ user.created_at | date }}</span>
+      </span>
+      {% if me and me.id == user.id %}<span class="badge badge-accent">você</span>{% endif %}
+    </a>
+  </li>
+{% else %}
+  {% if skip == 0 %}
+    <li class="user-empty">
+      {% if kind == "seguidores" %}Ninguém segue @{{ profile.user.username }} ainda.{% else %}@{{ profile.user.username }} ainda não segue ninguém.{% endif %}
+    </li>
+  {% endif %}
+{% endfor %}
+{% if next_skip is not none %}
+  <li class="user-more">
+    <button class="btn btn-ghost btn-block load-more"
+            hx-get="/u/{{ profile.user.username }}/{{ kind }}?skip={{ next_skip }}"
+            hx-target="closest li" hx-swap="outerHTML" hx-disabled-elt="this">
+      <span class="spinner" aria-hidden="true"></span><span>Carregar mais</span>
+    </button>
+  </li>
+{% endif %}
