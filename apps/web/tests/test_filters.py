@@ -2,7 +2,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from posts_web.filters import avatar_hue, full_datetime, handle, timeago
+from posts_web.filters import avatar_hue, full_datetime, timeago
 
 NOW = datetime(2026, 11, 14, 12, 0, tzinfo=UTC)
 
@@ -31,9 +31,5 @@ def test_naive_datetimes_are_treated_as_utc():
 
 
 def test_avatar_hue_is_stable_and_case_insensitive():
-    assert avatar_hue("Alice@Example.com") == avatar_hue("alice@example.com")
-    assert 0 <= avatar_hue("bob@example.com") < 360
-
-
-def test_handle():
-    assert handle("alice@example.com") == "alice"
+    assert avatar_hue("Alice") == avatar_hue("alice")
+    assert 0 <= avatar_hue("bob") < 360

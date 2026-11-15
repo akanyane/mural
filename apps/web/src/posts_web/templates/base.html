@@ -30,9 +30,9 @@
           {{ icon.moon("only-light") }}{{ icon.sun("only-dark") }}
         </button>
         {% if me %}
-          <a class="me" href="/u/{{ me.id }}" title="Meu perfil">
-            {% with email = me.email, size = "sm" %}{% include "partials/avatar.html" %}{% endwith %}
-            <span class="me-email">{{ me.email }}</span>
+          <a class="me" href="/u/{{ me.username }}" title="Meu perfil">
+            {% with name = me.username, size = "sm" %}{% include "partials/avatar.html" %}{% endwith %}
+            <span class="me-email">@{{ me.username }}</span>
           </a>
           <form method="post" action="/logout" class="inline">
             <button type="submit" class="icon-btn" aria-label="Sair" title="Sair">{{ icon.logout() }}</button>

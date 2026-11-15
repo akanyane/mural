@@ -5,8 +5,13 @@ from datetime import UTC, datetime
 
 import httpx2
 
-ME = {"id": 1, "email": "alice@example.com", "created_at": "2026-01-01T00:00:00Z"}
-BOB = {"id": 2, "email": "bob@example.com", "created_at": "2026-01-01T00:00:00Z"}
+ME = {
+    "id": 1,
+    "email": "alice@example.com",
+    "username": "alice",
+    "created_at": "2026-01-01T00:00:00Z",
+}
+BOB = {"id": 2, "email": "bob@example.com", "username": "bob", "created_at": "2026-01-01T00:00:00Z"}
 
 
 def make_post(

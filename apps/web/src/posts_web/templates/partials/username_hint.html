@@ -1,0 +1,5 @@
+{% if available %}
+  <span class="hint hint-ok">✓ @{{ username }} está disponível</span>
+{% else %}
+  <span class="hint hint-error">✕ {{ reason }}</span>
+{% endif %}

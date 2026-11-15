@@ -34,6 +34,18 @@
     }
   });
 
+  // Nome de usuário: minúsculas enquanto digita (a API normaliza de qualquer forma).
+  document.addEventListener("input", (event) => {
+    const field = event.target;
+    if (!(field instanceof HTMLInputElement) || !field.hasAttribute("data-username")) return;
+    const lower = field.value.toLowerCase().replace(/\s/g, "");
+    if (lower !== field.value) {
+      const position = field.selectionStart;
+      field.value = lower;
+      field.setSelectionRange(position, position);
+    }
+  });
+
   // Botão de comentários: o primeiro clique carrega o painel via HTMX,
   // o segundo fecha (sem nova requisição).
   document.addEventListener("htmx:beforeRequest", (event) => {

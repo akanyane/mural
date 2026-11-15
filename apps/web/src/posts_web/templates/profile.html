@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% import "partials/icons.html" as icon %}
-{% block title %}{{ profile.user.email | handle }} · Mural{% endblock %}
+{% block title %}@{{ profile.user.username }} · Mural{% endblock %}
 {% block content %}
 <section class="profile card">
   <div class="profile-head">
-    {% with email = profile.user.email, size = "xl" %}{% include "partials/avatar.html" %}{% endwith %}
+    {% with name = profile.user.username, size = "xl" %}{% include "partials/avatar.html" %}{% endwith %}
     <div class="profile-id">
-      <h1>{{ profile.user.email | handle }}{% if me and me.id == profile.user.id %} <span class="badge badge-accent">você</span>{% endif %}</h1>
-      <p class="muted">{{ profile.user.email }}</p>
+      <h1>{{ profile.user.username }}{% if me and me.id == profile.user.id %} <span class="badge badge-accent">você</span>{% endif %}</h1>
+      <p class="muted">@{{ profile.user.username }}{% if me and me.id == profile.user.id %} · {{ profile.user.email }} <span class="mono">(só você vê)</span>{% endif %}</p>
       <p class="mono">membro desde {{ profile.user.created_at | date }}</p>
     </div>
   </div>
@@ -19,7 +19,7 @@
 </section>
 
 <div class="feed-toolbar">
-  <h2 class="feed-title">{% if me and me.id == profile.user.id %}Seus posts{% else %}Posts de {{ profile.user.email | handle }}{% endif %}</h2>
+  <h2 class="feed-title">{% if me and me.id == profile.user.id %}Seus posts{% else %}Posts de {{ profile.user.username }}{% endif %}</h2>
   <a href="/" class="btn btn-ghost btn-sm">← Voltar ao mural</a>
 </div>
 

@@ -9,7 +9,8 @@ def test_feed_renders_posts_with_owner_actions_only_on_own_posts(logged_client, 
 
     assert response.status_code == 200
     html = response.text
-    assert "Meu post" in html and "bob@example.com" in html
+    assert "Meu post" in html and "@bob" in html
+    assert "bob@example.com" not in html  # email não aparece para os outros
     assert 'hx-get="/posts/1/edit"' in html
     assert 'hx-get="/posts/2/edit"' not in html
     assert "02/01/2026 15:30" in html

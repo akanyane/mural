@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from posts_schemas import PostCreate, PostOut, PostUpdate
+from posts_schemas import PostCreate, PostOut, PostUpdate, normalize_username, username_error
 
 from . import filters
 from .api_client import ApiClient, ApiError
@@ -37,7 +37,6 @@ templates.env.filters.update(
     date=filters.date_only,
     timeago=filters.timeago,
     avatar_hue=filters.avatar_hue,
-    handle=filters.handle,
 )
 
 
@@ -132,18 +131,19 @@ async def login_page(request: Request):
 async def login(
     request: Request,
     api: Api,
-    email: Annotated[str, Form()],
+    login: Annotated[str, Form()],
     password: Annotated[str, Form()],
 ):
+    """Entra com email ou nome de usuário (a API decide pelo "@")."""
     try:
-        token = await api.login(email, password)
+        token = await api.login(login, password)
     except ApiError as exc:
         if exc.status_code not in (403, 422):
             raise
         return templates.TemplateResponse(
             request,
             "login.html",
-            {"error": "Email ou senha inválidos.", "email": email},
+            {"error": "Usuário, email ou senha inválidos.", "login": login},
             status_code=401,
         )
     return set_session(redirect(request, "/"), token)
@@ -154,26 +154,54 @@ async def register_page(request: Request):
     return templates.TemplateResponse(request, "register.html", {})
 
 
+def _register_error(request: Request, message: str, status_code: int, email: str, username: str):
+    return templates.TemplateResponse(
+        request,
+        "register.html",
+        {"error": message, "email": email, "username": username},
+        status_code=status_code,
+    )
+
+
 @app.post("/register")
 async def register(
     request: Request,
     api: Api,
     email: Annotated[str, Form()],
+    username: Annotated[str, Form()],
     password: Annotated[str, Form()],
 ):
+    username = normalize_username(username)
+    # Mesmas regras da API (vêm de posts_schemas): erro claro sem ida e volta.
+    if error := username_error(username):
+        return _register_error(request, error, 422, email, username)
     try:
-        await api.register(email, password)
+        await api.register(email, username, password)
     except ApiError as exc:
         if exc.status_code not in (409, 422):
             raise
-        return templates.TemplateResponse(
-            request,
-            "register.html",
-            {"error": exc.detail, "email": email},
-            status_code=exc.status_code,
-        )
+        if exc.status_code == 409 and "username" in exc.detail.lower():
+            message = "Esse nome de usuário já está em uso."
+        elif exc.status_code == 409:
+            message = "Já existe uma conta com esse email."
+        else:
+            message = exc.detail
+        return _register_error(request, message, exc.status_code, email, username)
     token = await api.login(email, password)
     return set_session(redirect(request, "/"), token)
+
+
+@app.get("/register/check-username", response_class=HTMLResponse)
+async def check_username(request: Request, api: Api, username: str = ""):
+    """Fragmento HTMX com a disponibilidade do nome, enquanto a pessoa digita."""
+    normalized = normalize_username(username)
+    if not normalized:
+        return HTMLResponse("")
+    if error := username_error(normalized):
+        result = {"username": normalized, "available": False, "reason": error}
+    else:
+        result = (await api.username_available(normalized)).model_dump()
+    return templates.TemplateResponse(request, "partials/username_hint.html", result)
 
 
 @app.post("/logout")
@@ -337,13 +365,13 @@ async def delete_comment(request: Request, api: Api, post_id: int, comment_id: i
 # --- perfil ---------------------------------------------------------------------------
 
 
-@app.get("/u/{user_id}", response_class=HTMLResponse)
-async def profile_page(request: Request, api: Api, user_id: int):
+@app.get("/u/{username}", response_class=HTMLResponse)
+async def profile_page(request: Request, api: Api, username: str):
     if api.token is None:
         return redirect(request, "/login")
-    me, profile, posts = await asyncio.gather(
-        api.me(), api.profile(user_id), api.list_posts(owner_id=user_id, limit=PAGE_SIZE)
-    )
+    me, profile = await asyncio.gather(api.me(), api.profile(username))
+    user_id = profile.user.id
+    posts = await api.list_posts(owner_id=user_id, limit=PAGE_SIZE)
     return templates.TemplateResponse(
         request,
         "profile.html",

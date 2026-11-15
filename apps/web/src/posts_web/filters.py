@@ -34,11 +34,6 @@ def timeago(value: datetime, now: datetime | None = None) -> str:
     return _as_utc(value).strftime("%d/%m/%Y")
 
 
-def avatar_hue(email: str) -> int:
-    """Cor estável por usuário (0-359), derivada do email."""
-    return int(hashlib.md5(email.lower().encode()).hexdigest(), 16) % 360
-
-
-def handle(email: str) -> str:
-    """Parte do email antes do @, usada como nome de exibição."""
-    return email.split("@", 1)[0]
+def avatar_hue(name: str) -> int:
+    """Cor estável por usuário (0-359), derivada do nome de usuário."""
+    return int(hashlib.md5(name.lower().encode()).hexdigest(), 16) % 360

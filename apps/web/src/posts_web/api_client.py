@@ -14,6 +14,7 @@ from posts_schemas import (
     PostRead,
     PostUpdate,
     Token,
+    UsernameAvailability,
     UserOut,
     UserProfile,
 )
@@ -51,15 +52,16 @@ class ApiClient:
             raise ApiError(response.status_code, _error_detail(response))
         return response
 
-    async def login(self, email: str, password: str) -> str:
+    async def login(self, login: str, password: str) -> str:
+        """`login` é o email ou o nome de usuário."""
         response = await self._request(
-            "POST", "/login", data={"username": email, "password": password}
+            "POST", "/login", data={"username": login, "password": password}
         )
         return Token.model_validate(response.json()).access_token
 
-    async def register(self, email: str, password: str) -> UserOut:
+    async def register(self, email: str, username: str, password: str) -> UserOut:
         response = await self._request(
-            "POST", "/users/", json={"email": email, "password": password}
+            "POST", "/users/", json={"email": email, "username": username, "password": password}
         )
         return UserOut.model_validate(response.json())
 
@@ -92,8 +94,8 @@ class ApiClient:
     async def vote(self, post_id: int, direction: int) -> None:
         await self._request("POST", "/vote/", json={"post_id": post_id, "dir": direction})
 
-    async def profile(self, user_id: int) -> UserProfile:
-        response = await self._request("GET", f"/users/{user_id}/profile")
+    async def profile(self, username: str) -> UserProfile:
+        response = await self._request("GET", f"/users/{username}/profile")
         return UserProfile.model_validate(response.json())
 
     async def list_comments(self, post_id: int) -> list[CommentOut]:
@@ -108,3 +110,9 @@ class ApiClient:
 
     async def delete_comment(self, comment_id: int) -> None:
         await self._request("DELETE", f"/comments/{comment_id}")
+
+    async def username_available(self, username: str) -> UsernameAvailability:
+        response = await self._request(
+            "GET", "/users/username-available", params={"username": username}
+        )
+        return UsernameAvailability.model_validate(response.json())

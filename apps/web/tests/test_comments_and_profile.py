@@ -8,8 +8,8 @@ def test_card_has_comment_toggle_with_count_and_profile_links(logged_client, api
 
     assert 'hx-get="/posts/7/comments"' in html
     assert 'id="comment-count-7" class="chip-count">4<' in html
-    assert 'href="/u/2"' in html  # autor do post leva ao perfil
-    assert 'href="/u/1"' in html  # "eu" no topo leva ao meu perfil
+    assert 'href="/u/bob"' in html  # autor do post leva ao perfil
+    assert 'href="/u/alice"' in html  # "eu" no topo leva ao meu perfil
 
 
 def test_comments_panel_lists_comments_and_delete_permissions(logged_client, api):
@@ -81,16 +81,17 @@ def test_delete_comment_updates_count(logged_client, api):
 def test_profile_page(logged_client, api):
     api.on(
         "GET",
-        "/users/2/profile",
+        "/users/bob/profile",
         json={"user": BOB, "posts": 5, "votes_received": 12, "comments": 3},
     )
     api.on("GET", "/posts/", json=[make_post(i, owner=BOB) for i in range(10, 0, -1)])
 
-    response = logged_client.get("/u/2")
+    response = logged_client.get("/u/bob")
 
     assert response.status_code == 200
     html = response.text
     assert "Posts de bob" in html
+    assert "bob@example.com" not in html
     assert "<dd>5</dd>" in html and "<dd>12</dd>" in html and "<dd>3</dd>" in html
     assert "membro desde 01/01/2026" in html
     assert api.last("GET", "/posts/").url.params["owner_id"] == "2"
@@ -100,18 +101,21 @@ def test_profile_page(logged_client, api):
 
 def test_my_profile_shows_badge(logged_client, api):
     api.on(
-        "GET", "/users/1/profile", json={"user": ME, "posts": 0, "votes_received": 0, "comments": 0}
+        "GET",
+        "/users/alice/profile",
+        json={"user": ME, "posts": 0, "votes_received": 0, "comments": 0},
     )
     api.on("GET", "/posts/", json=[])
 
-    html = logged_client.get("/u/1").text
+    html = logged_client.get("/u/alice").text
 
     assert "Seus posts" in html and ">você<" in html
+    assert "alice@example.com" in html and "(só você vê)" in html
     assert "Nada por aqui ainda." in html
 
 
 def test_profile_without_session_redirects(client):
-    response = client.get("/u/1")
+    response = client.get("/u/alice")
 
     assert response.status_code == 303
     assert response.headers["location"] == "/login"
@@ -119,11 +123,11 @@ def test_profile_without_session_redirects(client):
 
 def test_profile_of_missing_user_shows_error_page(logged_client, api):
     api.on(
-        "GET", "/users/99/profile", status=404, json={"detail": "User with id: 99 was not found"}
+        "GET", "/users/ninguem/profile", status=404, json={"detail": "User ninguem was not found"}
     )
     api.on("GET", "/posts/", json=[])
 
-    response = logged_client.get("/u/99")
+    response = logged_client.get("/u/ninguem")
 
     assert response.status_code == 404
     assert "was not found" in response.text

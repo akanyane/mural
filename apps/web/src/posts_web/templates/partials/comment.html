@@ -1,11 +1,11 @@
 {% import "partials/icons.html" as icon %}
 <li id="comment-{{ comment.id }}" class="comment">
-  <a href="/u/{{ comment.owner_id }}" class="avatar-link" tabindex="-1" aria-hidden="true">
-    {%- with email = comment.owner.email, size = "sm" %}{% include "partials/avatar.html" %}{% endwith -%}
+  <a href="/u/{{ comment.owner.username }}" class="avatar-link" tabindex="-1" aria-hidden="true">
+    {%- with name = comment.owner.username, size = "sm" %}{% include "partials/avatar.html" %}{% endwith -%}
   </a>
   <div class="comment-body">
     <div class="comment-meta">
-      <a href="/u/{{ comment.owner_id }}" class="comment-author">{{ comment.owner.email | handle }}</a>
+      <a href="/u/{{ comment.owner.username }}" class="comment-author">{{ comment.owner.username }}</a>
       <time datetime="{{ comment.created_at.isoformat() }}" title="{{ comment.created_at | datetime }}">{{ comment.created_at | timeago }}</time>
     </div>
     <p class="comment-text">{{ comment.content }}</p>

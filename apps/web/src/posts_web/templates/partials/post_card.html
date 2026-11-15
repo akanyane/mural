@@ -2,13 +2,13 @@
 {% set post = item.Post %}
 <article id="post-{{ post.id }}" class="post card" style="--i: {{ i | default(0) }}">
   <header class="post-head">
-    <a href="/u/{{ post.owner_id }}" class="avatar-link" tabindex="-1" aria-hidden="true">
-      {%- with email = post.owner.email %}{% include "partials/avatar.html" %}{% endwith -%}
+    <a href="/u/{{ post.owner.username }}" class="avatar-link" tabindex="-1" aria-hidden="true">
+      {%- with name = post.owner.username %}{% include "partials/avatar.html" %}{% endwith -%}
     </a>
     <div class="post-meta">
-      <a href="/u/{{ post.owner_id }}" class="post-author">{{ post.owner.email | handle }}</a>
+      <a href="/u/{{ post.owner.username }}" class="post-author">{{ post.owner.username }}</a>
       <span class="post-sub">
-        <span class="post-email">{{ post.owner.email }} · </span><time datetime="{{ post.created_at.isoformat() }}" title="{{ post.created_at | datetime }}">{{ post.created_at | timeago }}</time>
+        <span class="post-handle">@{{ post.owner.username }} · </span><time datetime="{{ post.created_at.isoformat() }}" title="{{ post.created_at | datetime }}">{{ post.created_at | timeago }}</time>
       </span>
     </div>
     {% if not post.published %}<span class="badge">rascunho</span>{% endif %}

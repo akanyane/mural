@@ -1232,6 +1232,86 @@ kbd {
   box-shadow: var(--shadow-sm);
 }
 
+/* Campo com "@" fixo na frente (nome de usuário) */
+.input-prefix {
+  display: flex;
+  align-items: stretch;
+  border: var(--border);
+  background: var(--surface);
+  transition:
+    box-shadow 0.15s var(--ease-out),
+    transform 0.15s var(--ease-out);
+}
+
+.input-prefix > span {
+  display: grid;
+  place-items: center;
+  padding: 0 12px;
+  border-right: var(--border);
+  background: var(--surface-2);
+  font: 700 15px var(--font-mono);
+  text-transform: none;
+}
+
+.field .input-prefix input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+}
+
+.field .input-prefix input:focus {
+  transform: none;
+  box-shadow: none;
+}
+
+.input-prefix:focus-within {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.field-hint:empty {
+  display: none;
+}
+
+.hint {
+  display: inline-block;
+  padding: 3px 8px;
+  border: 2px solid currentColor;
+  font: 700 12px var(--font-mono);
+  text-transform: none;
+  letter-spacing: 0;
+  animation: slide-in 0.2s var(--ease-out);
+}
+
+.hint-ok {
+  color: #1d7a3a;
+  background: #dcf5e3;
+}
+
+.hint-error {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+:root[data-theme="dark"] .hint-ok {
+  color: #7ee2a0;
+  background: #163323;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .hint-ok {
+    color: #7ee2a0;
+    background: #163323;
+  }
+}
+
+.field-help {
+  font: 500 12px var(--font-body);
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--muted);
+}
+
 .form-error {
   display: flex;
   align-items: center;
@@ -1401,8 +1481,7 @@ kbd {
     padding-right: 3px;
   }
 
-  .me-email,
-  .post-email {
+  .me-email {
     display: none;
   }
 

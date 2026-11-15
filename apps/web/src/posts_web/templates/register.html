@@ -14,6 +14,19 @@
       <input type="email" name="email" value="{{ email or '' }}" autocomplete="email" placeholder="voce@exemplo.com" required autofocus>
     </label>
     <label class="field">
+      <span>Nome de usuário</span>
+      <span class="input-prefix">
+        <span aria-hidden="true">@</span>
+        <input type="text" name="username" value="{{ username or '' }}" required maxlength="30"
+               autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="seu.usuario"
+               data-username aria-describedby="username-hint"
+               hx-get="/register/check-username" hx-trigger="input changed delay:350ms"
+               hx-target="#username-hint" hx-sync="this:replace">
+      </span>
+      <span id="username-hint" class="field-hint" aria-live="polite"></span>
+      <small class="field-help">Letras minúsculas, números, _ e . (até 30)</small>
+    </label>
+    <label class="field">
       <span>Senha</span>
       <input type="password" name="password" autocomplete="new-password" placeholder="Até 72 caracteres" required maxlength="72">
     </label>
