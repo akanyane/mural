@@ -62,16 +62,17 @@ uv run ruff format .
 ## Releases
 
 Versioning is automated by [release-please](https://github.com/googleapis/release-please)
-(`.github/workflows/release-please.yml`). Each package (`posts-api`, `posts-web`,
-`posts-schemas`) has its own version, `CHANGELOG.md` and tag (e.g. `posts-api-v0.3.0`).
+(`.github/workflows/release-please.yml`). The whole monorepo shares **one version** and **one
+tag** (`vX.Y.Z`): `version.txt`, the three `pyproject.toml` files and `uv.lock` are always
+bumped together, and there is a single `CHANGELOG.md` at the root.
 
 1. Write commits following [Conventional Commits](https://www.conventionalcommits.org/):
    `feat(web): ...`, `fix(api): ...`, `feat(api)!: ...` for breaking changes.
-2. On every push to `main`, release-please opens/updates a release PR with the version bumps
-   and changelogs (only for packages whose files changed). The workflow also syncs `uv.lock`.
-3. Merging that PR creates the tags and GitHub releases.
+2. On every push to `main`, release-please opens/updates a release PR with the next version and
+   changelog. A second job then pushes a "chore: sync uv.lock" commit to that PR.
+3. Wait for that commit, then merge the release PR: it creates the `vX.Y.Z` tag and GitHub release.
 
-While a package is `0.x`, `feat` bumps the minor version and breaking changes do not jump to `1.0`.
+While the version is `0.x`, `feat` bumps the minor version and breaking changes do not jump to `1.0`.
 
 ## Deploy notes
 

@@ -1,22 +1,17 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-  "release-type": "python",
+  "release-type": "simple",
   "bump-minor-pre-major": true,
-  "include-component-in-tag": true,
-  "separate-pull-requests": false,
-  "bootstrap-sha": "f682d39f89ebaf707640b95ba7f2d2581ee75847",
+  "include-component-in-tag": false,
+  "bootstrap-sha": "0f35bf436639b9042d4a1664dbed38c9c639e8cd",
   "packages": {
-    "apps/api": {
-      "component": "posts-api",
-      "package-name": "posts-api"
-    },
-    "apps/web": {
-      "component": "posts-web",
-      "package-name": "posts-web"
-    },
-    "packages/schemas": {
-      "component": "posts-schemas",
-      "package-name": "posts-schemas"
+    ".": {
+      "package-name": "mural",
+      "extra-files": [
+        { "type": "toml", "path": "apps/api/pyproject.toml", "jsonpath": "$.project.version" },
+        { "type": "toml", "path": "apps/web/pyproject.toml", "jsonpath": "$.project.version" },
+        { "type": "toml", "path": "packages/schemas/pyproject.toml", "jsonpath": "$.project.version" }
+      ]
     }
   }
 }
