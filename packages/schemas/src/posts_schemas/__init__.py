@@ -1,7 +1,60 @@
+import re
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, StringConstraints, field_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    EmailStr,
+    StringConstraints,
+    field_validator,
+)
+
+# --- nome de usuário (regras do Instagram) ---------------------------------------------
+
+USERNAME_MAX_LENGTH = 30
+_USERNAME_CHARS = re.compile(r"^[a-z0-9._]+$")
+
+
+def normalize_username(value: str) -> str:
+    """Remove espaços nas pontas, um "@" inicial e passa para minúsculas."""
+    return value.strip().removeprefix("@").lower()
+
+
+def username_error(value: str) -> str | None:
+    """Motivo pelo qual um nome de usuário (já normalizado) é inválido, ou None.
+
+    Regras do Instagram: até 30 caracteres; só letras sem acento, números, "_" e
+    "."; sem ponto no início/fim nem dois pontos seguidos; não pode ser só números.
+    """
+    if not value:
+        return "Escolha um nome de usuário."
+    if len(value) > USERNAME_MAX_LENGTH:
+        return f"Use no máximo {USERNAME_MAX_LENGTH} caracteres."
+    if not _USERNAME_CHARS.match(value):
+        return "Use só letras sem acento, números, _ e ."
+    if value.startswith(".") or value.endswith("."):
+        return "Não pode começar nem terminar com ponto."
+    if ".." in value:
+        return "Não pode ter dois pontos seguidos."
+    if value.isdigit():
+        return "Não pode ter só números."
+    return None
+
+
+def _check_username(value: str) -> str:
+    if error := username_error(value):
+        raise ValueError(error)
+    return value
+
+
+Username = Annotated[
+    str,
+    BeforeValidator(lambda v: normalize_username(v) if isinstance(v, str) else v),
+    AfterValidator(_check_username),
+]
 
 # bcrypt só considera os primeiros 72 bytes, e o bcrypt>=5 lança erro acima disso.
 MAX_PASSWORD_BYTES = 72
@@ -9,6 +62,7 @@ MAX_PASSWORD_BYTES = 72
 
 class UserCreate(BaseModel):
     email: EmailStr
+    username: Username
     password: str
 
     @field_validator("password")
@@ -24,6 +78,7 @@ class UserOut(BaseModel):
 
     id: int
     email: EmailStr
+    username: str
     created_at: datetime
 
 
@@ -99,3 +154,9 @@ class UserProfile(BaseModel):
     posts: int
     votes_received: int
     comments: int
+
+
+class UsernameAvailability(BaseModel):
+    username: str
+    available: bool
+    reason: str | None = None
