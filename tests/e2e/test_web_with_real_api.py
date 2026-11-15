@@ -4,7 +4,10 @@ HTMX = {"HX-Request": "true"}
 
 
 def _register(client, email: str) -> None:
-    response = client.post("/register", data={"email": email, "password": "secret123"})
+    username = email.split("@")[0]
+    response = client.post(
+        "/register", data={"email": email, "username": username, "password": "secret123"}
+    )
     assert response.status_code == 303, response.text
     assert "access_token=" in response.headers["set-cookie"]
 
@@ -19,7 +22,7 @@ def test_full_user_journey(web):
 
     feed = alice.get("/")
     assert feed.status_code == 200
-    assert "alice@example.com" in feed.text
+    assert "@alice" in feed.text
     assert 'id="empty-feed"' in feed.text
 
     created = alice.post(
@@ -83,19 +86,21 @@ def test_other_users_cannot_change_my_posts(web):
 def test_duplicate_registration_shows_message(web):
     _register(web(), "alice@example.com")
 
-    response = web().post("/register", data={"email": "alice@example.com", "password": "x"})
+    response = web().post(
+        "/register", data={"email": "alice@example.com", "username": "outra", "password": "x"}
+    )
 
     assert response.status_code == 409
-    assert "already exists" in response.text
+    assert "Já existe uma conta com esse email." in response.text
 
 
 def test_wrong_password(web):
     _register(web(), "alice@example.com")
 
-    response = web().post("/login", data={"email": "alice@example.com", "password": "errada"})
+    response = web().post("/login", data={"login": "alice", "password": "errada"})
 
     assert response.status_code == 401
-    assert "Email ou senha inválidos." in response.text
+    assert "Usuário, email ou senha inválidos." in response.text
 
 
 def test_comments_and_profile(web):
@@ -122,11 +127,32 @@ def test_comments_and_profile(web):
     assert f'hx-delete="/posts/{post_id}/comments/{comment_id}"' in panel
 
     # perfil do bob mostra a contagem de comentários
-    bob_id = int(re.search(r'href="/u/(\d+)" title="Meu perfil"', bob.get("/").text).group(1))
-    profile = alice.get(f"/u/{bob_id}").text
+    assert 'href="/u/bob" title="Meu perfil"' in bob.get("/").text
+    profile = alice.get("/u/bob").text
     assert "Posts de bob" in profile
     assert re.search(r"<dt>Comentários</dt><dd>1</dd>", profile)
 
     deleted = alice.delete(f"/posts/{post_id}/comments/{comment_id}", headers=HTMX)
     assert deleted.status_code == 200
     assert ">0<" in deleted.text
+
+
+def test_username_signup_rules_and_login(web):
+    alice = web()
+    _register(alice, "alice@example.com")
+
+    # disponibilidade ao vivo, contra a API real
+    assert "Esse nome já está em uso." in web().get("/register/check-username?username=ALICE").text
+    assert (
+        "✓ @alice.2 está disponível" in web().get("/register/check-username?username=alice.2").text
+    )
+
+    taken = web().post(
+        "/register", data={"email": "x@example.com", "username": "Alice", "password": "pw"}
+    )
+    assert taken.status_code == 409
+    assert "Esse nome de usuário já está em uso." in taken.text
+
+    # login pelo nome de usuário, em qualquer caixa
+    response = web().post("/login", data={"login": "ALICE", "password": "secret123"})
+    assert response.status_code == 303
