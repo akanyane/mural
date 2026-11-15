@@ -29,21 +29,51 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
-def _run_with_connection(connection) -> None:
-    _configure(connection=connection)
-    with context.begin_transaction():
-        context.run_migrations()
+def _run_with_connection(connection, owns_connection: bool) -> None:
+    if connection.dialect.name != "sqlite":
+        _configure(connection=connection)
+        with context.begin_transaction():
+            context.run_migrations()
+        return
+
+    # No SQLite, o batch mode altera uma tabela recriando-a (cria a nova, copia,
+    # DROP na antiga, renomeia). Com as foreign keys ligadas, esse DROP dispara os
+    # ON DELETE CASCADE e apaga em cascata as linhas que referenciam a tabela
+    # (ex.: alterar "users" apagaria posts, votos e comentários). Por isso as FKs
+    # ficam desligadas durante as migrations e a integridade é conferida no fim.
+    connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
+    if connection.exec_driver_sql("PRAGMA foreign_keys").scalar():
+        # O PRAGMA não tem efeito dentro de uma transação já aberta.
+        raise RuntimeError(
+            "Não foi possível desligar as foreign keys do SQLite antes das migrations "
+            "(há uma transação aberta nesta conexão). Abortado para não apagar dados."
+        )
+    if owns_connection:
+        connection.commit()  # encerra o "autobegin" do SQLAlchemy; o Alembic abre a dele
+    try:
+        _configure(connection=connection)
+        with context.begin_transaction():
+            context.run_migrations()
+        violations = connection.exec_driver_sql("PRAGMA foreign_key_check").fetchall()
+        if violations:
+            raise RuntimeError(f"Migrations deixaram foreign keys inválidas: {violations}")
+    finally:
+        # Se a conexão for de quem chamou (ex.: testes) e ainda houver transação aberta,
+        # isto não tem efeito; o listener "checkout" do engine religa as FKs no próximo uso.
+        connection.exec_driver_sql("PRAGMA foreign_keys=ON")
+        if owns_connection:
+            connection.commit()
 
 
 def run_migrations_online() -> None:
     if external_connection is not None:
-        _run_with_connection(external_connection)
+        _run_with_connection(external_connection, owns_connection=False)
         return
 
     from posts_api.database import engine
 
     with engine.connect() as connection:
-        _run_with_connection(connection)
+        _run_with_connection(connection, owns_connection=True)
 
 
 if context.is_offline_mode():

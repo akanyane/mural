@@ -67,7 +67,9 @@ def test_post_owner_can_delete_comments_on_their_post(
 
 def test_others_cannot_delete_comment(client, auth_headers, other_auth_headers, posts):
     comment = _comment(client, auth_headers, posts[2]["id"]).json()  # alice comenta no post do bob
-    stranger = client.post("/users/", json={"email": "carol@example.com", "password": "pw"})
+    stranger = client.post(
+        "/users/", json={"email": "carol@example.com", "username": "carol", "password": "pw"}
+    )
     assert stranger.status_code == 201
     token = client.post("/login", data={"username": "carol@example.com", "password": "pw"})
     carol = {"Authorization": f"Bearer {token.json()['access_token']}"}

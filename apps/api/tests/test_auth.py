@@ -74,3 +74,10 @@ def test_hash_generated_by_old_passlib_still_verifies():
 
 def test_verify_password_over_72_bytes_returns_false():
     assert utils.verify_password("x" * 100, utils.hash_password("x" * 72)) is False
+
+
+@pytest.mark.parametrize("login", ["alice", "ALICE", "@alice"])
+def test_login_with_username(client, user, login):
+    response = client.post("/login", data={"username": login, "password": user["password"]})
+
+    assert response.status_code == 200

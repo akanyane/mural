@@ -17,8 +17,11 @@ def create_db_engine(url: str) -> Engine:
 
     if is_sqlite:
         # Sem isso o SQLite ignora as foreign keys (e o ON DELETE CASCADE).
-        @event.listens_for(engine, "connect")
-        def _enable_foreign_keys(dbapi_connection, _connection_record):
+        # "checkout" (e não só "connect"): roda toda vez que uma conexão sai do pool,
+        # então uma conexão que teve as FKs desligadas (ex.: pelas migrations) volta
+        # a tê-las ligadas no próximo uso.
+        @event.listens_for(engine, "checkout")
+        def _enable_foreign_keys(dbapi_connection, _connection_record, _connection_proxy):
             cursor = dbapi_connection.cursor()
             cursor.execute("PRAGMA foreign_keys=ON")
             cursor.close()

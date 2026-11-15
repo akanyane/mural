@@ -78,8 +78,13 @@ def client(session_factory):
     app.dependency_overrides.clear()
 
 
-def _create_user(client, email: str, password: str = "secret123") -> dict:
-    response = client.post("/users/", json={"email": email, "password": password})
+def _create_user(
+    client, email: str, password: str = "secret123", username: str | None = None
+) -> dict:
+    username = username or email.split("@")[0]
+    response = client.post(
+        "/users/", json={"email": email, "username": username, "password": password}
+    )
     assert response.status_code == 201, response.text
     return {**response.json(), "password": password}
 
