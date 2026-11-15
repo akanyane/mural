@@ -1,10 +1,9 @@
 # Changelog
 
-## [0.3.0](https://github.com/akanyane/mural/releases/tag/posts-api-v0.3.0) (2026-11-15)
+## [0.3.0](https://github.com/akanyane/mural/releases/tag/v0.3.0) (2026-11-15)
 
-First release of Mural as a monorepo. Until this version each package had its own version and
-tag (`posts-api-v0.3.0`, `posts-web-v0.2.0`, `posts-schemas-v0.2.0`). From now on the whole
-repository shares a single version and a single tag (`vX.Y.Z`).
+First release of Mural as a monorepo. The whole repository (API, web app and shared schemas)
+shares a single version and a single tag (`vX.Y.Z`).
 
 ### ⚠ BREAKING CHANGES
 
