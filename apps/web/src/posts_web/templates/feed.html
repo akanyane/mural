@@ -28,11 +28,17 @@
 </section>
 
 <div class="feed-toolbar">
-  <h1 class="feed-title">Últimos posts</h1>
+  <h1 class="sr-only">{% if feed %}Posts de quem você segue{% else %}Últimos posts{% endif %}</h1>
+  <nav class="feed-tabs" aria-label="Feeds">
+    <a href="/" class="tab{% if not feed %} is-active{% endif %}"{% if not feed %} aria-current="page"{% endif %}>Para você</a>
+    <a href="/?feed=seguindo" class="tab{% if feed %} is-active{% endif %}"{% if feed %} aria-current="page"{% endif %}>Seguindo</a>
+  </nav>
   <label class="search">
     {{ icon.search() }}
+    <input type="hidden" name="feed" value="{{ feed }}">
     <input type="search" name="search" value="{{ search }}" placeholder="Buscar por título…" aria-label="Buscar por título"
-           hx-get="/posts" hx-trigger="input changed delay:300ms, search" hx-target="#posts">
+           hx-get="/posts" hx-trigger="input changed delay:300ms, search" hx-target="#posts"
+           hx-include="previous [name='feed']">
   </label>
 </div>
 

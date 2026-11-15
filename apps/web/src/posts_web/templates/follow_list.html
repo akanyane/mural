@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% set u = profile.user.username %}
+{% block title %}{{ "Seguidores" if kind == "seguidores" else "Seguindo" }} · @{{ u }} · Mural{% endblock %}
+{% block content %}
+<a href="/u/{{ u }}" class="back-link">← @{{ u }}</a>
+<nav class="feed-tabs follow-tabs" aria-label="Seguidores e seguindo">
+  <a href="/u/{{ u }}/seguidores" class="tab{% if kind == 'seguidores' %} is-active{% endif %}"{% if kind == 'seguidores' %} aria-current="page"{% endif %}>
+    {{ profile.followers }} {{ "seguidor" if profile.followers == 1 else "seguidores" }}
+  </a>
+  <a href="/u/{{ u }}/seguindo" class="tab{% if kind == 'seguindo' %} is-active{% endif %}"{% if kind == 'seguindo' %} aria-current="page"{% endif %}>
+    {{ profile.following }} seguindo
+  </a>
+</nav>
+<h1 class="sr-only">{{ "Seguidores de" if kind == "seguidores" else "Quem" }} @{{ u }}{{ " segue" if kind == "seguindo" }}</h1>
+<ul class="user-list card">
+  {% include "partials/user_list.html" %}
+</ul>
+{% endblock %}

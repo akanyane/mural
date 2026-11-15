@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, status
+from typing import Annotated
+
+from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
@@ -21,6 +23,21 @@ def _username_taken(username: str) -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_409_CONFLICT, detail=f"Username {username} is already taken"
     )
+
+
+def _get_user_by_username(db: DbSession, username: str) -> models.User:
+    normalized = schemas.normalize_username(username)
+    user = db.scalar(select(models.User).where(models.User.username == normalized))
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"User {normalized} was not found"
+        )
+    return user
+
+
+def _follow_exists(db: DbSession, follower_id: int, followed_id: int) -> bool:
+    key = {"follower_id": follower_id, "followed_id": followed_id}
+    return db.get(models.Follow, key) is not None
 
 
 def _username_exists(db: DbSession, username: str) -> bool:
@@ -80,12 +97,7 @@ def get_user(id: int, db: DbSession):
 
 @router.get("/{username}/profile", response_model=schemas.UserProfile)
 def get_profile(username: str, db: DbSession, current_user: CurrentUser):
-    normalized = schemas.normalize_username(username)
-    user = db.scalar(select(models.User).where(models.User.username == normalized))
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"User {normalized} was not found"
-        )
+    user = _get_user_by_username(db, username)
 
     def count(stmt) -> int:
         return db.scalar(stmt) or 0
@@ -106,4 +118,82 @@ def get_profile(username: str, db: DbSession, current_user: CurrentUser):
             .select_from(models.Comment)
             .where(models.Comment.owner_id == user.id)
         ),
+        "followers": count(
+            select(func.count())
+            .select_from(models.Follow)
+            .where(models.Follow.followed_id == user.id)
+        ),
+        "following": count(
+            select(func.count())
+            .select_from(models.Follow)
+            .where(models.Follow.follower_id == user.id)
+        ),
+        "is_following": _follow_exists(db, current_user.id, user.id),
+        "follows_you": _follow_exists(db, user.id, current_user.id),
     }
+
+
+# --- seguir -----------------------------------------------------------------------------
+# PUT/DELETE idempotentes: repetir a ação não dá erro, o que simplifica botões de
+# "seguir" que podem ser clicados duas vezes ou disparados em paralelo.
+
+
+@router.put("/{username}/follow", status_code=status.HTTP_204_NO_CONTENT)
+def follow(username: str, db: DbSession, current_user: CurrentUser) -> None:
+    target = _get_user_by_username(db, username)
+    if target.id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot follow yourself"
+        )
+    if _follow_exists(db, current_user.id, target.id):
+        return
+    db.add(models.Follow(follower_id=current_user.id, followed_id=target.id))
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()  # outra requisição criou o mesmo follow ao mesmo tempo: já está seguindo
+
+
+@router.delete("/{username}/follow", status_code=status.HTTP_204_NO_CONTENT)
+def unfollow(username: str, db: DbSession, current_user: CurrentUser) -> None:
+    target = _get_user_by_username(db, username)
+    follow = db.get(models.Follow, {"follower_id": current_user.id, "followed_id": target.id})
+    if follow is not None:
+        db.delete(follow)
+        db.commit()
+
+
+Limit = Annotated[int, Query(ge=1, le=100)]
+Skip = Annotated[int, Query(ge=0)]
+
+
+@router.get("/{username}/followers", response_model=list[schemas.UserPublic])
+def list_followers(
+    username: str, db: DbSession, current_user: CurrentUser, limit: Limit = 50, skip: Skip = 0
+):
+    """Quem segue `username` (mais recentes primeiro)."""
+    target = _get_user_by_username(db, username)
+    return db.scalars(
+        select(models.User)
+        .join(models.Follow, models.Follow.follower_id == models.User.id)
+        .where(models.Follow.followed_id == target.id)
+        .order_by(models.Follow.created_at.desc(), models.User.id.desc())
+        .limit(limit)
+        .offset(skip)
+    ).all()
+
+
+@router.get("/{username}/following", response_model=list[schemas.UserPublic])
+def list_following(
+    username: str, db: DbSession, current_user: CurrentUser, limit: Limit = 50, skip: Skip = 0
+):
+    """Quem `username` segue (mais recentes primeiro)."""
+    target = _get_user_by_username(db, username)
+    return db.scalars(
+        select(models.User)
+        .join(models.Follow, models.Follow.followed_id == models.User.id)
+        .where(models.Follow.follower_id == target.id)
+        .order_by(models.Follow.created_at.desc(), models.User.id.desc())
+        .limit(limit)
+        .offset(skip)
+    ).all()

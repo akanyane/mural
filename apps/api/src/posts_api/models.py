@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, func, true
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, func, true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -51,3 +51,20 @@ class Comment(Base):
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
 
     owner: Mapped[User] = relationship()
+
+
+class Follow(Base):
+    """follower_id segue followed_id."""
+
+    __tablename__ = "follows"
+    __table_args__ = (CheckConstraint("follower_id != followed_id", name="ck_follows_not_self"),)
+
+    follower_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    # A chave primária (follower_id, followed_id) já indexa "quem eu sigo";
+    # este índice atende "quem me segue".
+    followed_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

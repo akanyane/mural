@@ -214,25 +214,47 @@ async def logout(request: Request):
 # --- feed e posts ---------------------------------------------------------------------------
 
 
+FOLLOWING_FEED = "seguindo"  # valor de ?feed= para a aba "Seguindo"
+
+
 @app.get("/", response_class=HTMLResponse)
-async def feed(request: Request, api: Api, search: str = ""):
+async def feed(request: Request, api: Api, search: str = "", feed: str = ""):
     if api.token is None:
         return redirect(request, "/login")
-    me, posts = await asyncio.gather(api.me(), api.list_posts(search=search, limit=PAGE_SIZE))
+    feed = FOLLOWING_FEED if feed == FOLLOWING_FEED else ""
+    me, posts = await asyncio.gather(
+        api.me(), api.list_posts(search=search, limit=PAGE_SIZE, following=bool(feed))
+    )
     return templates.TemplateResponse(
         request,
         "feed.html",
-        {"me": me, "posts": posts, "search": search, "skip": 0, "next_skip": next_skip(posts, 0)},
+        {
+            "me": me,
+            "posts": posts,
+            "search": search,
+            "feed": feed,
+            "skip": 0,
+            "next_skip": next_skip(posts, 0),
+        },
     )
 
 
 @app.get("/posts", response_class=HTMLResponse)
 async def post_list(
-    request: Request, api: Api, search: str = "", skip: int = 0, owner_id: int | None = None
+    request: Request,
+    api: Api,
+    search: str = "",
+    skip: int = 0,
+    owner_id: int | None = None,
+    feed: str = "",
 ):
     """Fragmento usado pela busca e pelo botão "Carregar mais" (feed e perfil)."""
+    feed = FOLLOWING_FEED if feed == FOLLOWING_FEED else ""
     me, posts = await asyncio.gather(
-        api.me(), api.list_posts(search=search, skip=skip, limit=PAGE_SIZE, owner_id=owner_id)
+        api.me(),
+        api.list_posts(
+            search=search, skip=skip, limit=PAGE_SIZE, owner_id=owner_id, following=bool(feed)
+        ),
     )
     return templates.TemplateResponse(
         request,
@@ -244,6 +266,7 @@ async def post_list(
             "skip": skip,
             "next_skip": next_skip(posts, skip),
             "owner_id": owner_id,
+            "feed": feed,
         },
     )
 
@@ -385,6 +408,62 @@ async def profile_page(request: Request, api: Api, username: str):
             "owner_id": user_id,
         },
     )
+
+
+# --- seguir ---------------------------------------------------------------------------
+
+FOLLOW_PAGE_SIZE = 30
+
+
+async def _profile_social(request: Request, api: Api, username: str) -> HTMLResponse:
+    me, profile = await asyncio.gather(api.me(), api.profile(username))
+    return templates.TemplateResponse(
+        request,
+        "partials/profile_social.html",
+        {"me": me, "profile": profile, "toggled": True},
+    )
+
+
+@app.put("/u/{username}/follow", response_class=HTMLResponse)
+async def follow_user(request: Request, api: Api, username: str):
+    await api.follow(username)
+    return await _profile_social(request, api, username)
+
+
+@app.delete("/u/{username}/follow", response_class=HTMLResponse)
+async def unfollow_user(request: Request, api: Api, username: str):
+    await api.unfollow(username)
+    return await _profile_social(request, api, username)
+
+
+async def _follow_list(request: Request, api: Api, username: str, kind: str, skip: int):
+    """Página (ou fragmento do "Carregar mais") com seguidores ou seguindo."""
+    if api.token is None:
+        return redirect(request, "/login")
+    fetch = api.followers if kind == "seguidores" else api.following
+    me, profile, users = await asyncio.gather(
+        api.me(), api.profile(username), fetch(username, skip=skip, limit=FOLLOW_PAGE_SIZE)
+    )
+    context = {
+        "me": me,
+        "profile": profile,
+        "users": users,
+        "kind": kind,
+        "skip": skip,
+        "next_skip": skip + FOLLOW_PAGE_SIZE if len(users) == FOLLOW_PAGE_SIZE else None,
+    }
+    template = "partials/user_list.html" if is_htmx(request) else "follow_list.html"
+    return templates.TemplateResponse(request, template, context)
+
+
+@app.get("/u/{username}/seguidores", response_class=HTMLResponse)
+async def followers_page(request: Request, api: Api, username: str, skip: int = 0):
+    return await _follow_list(request, api, username, "seguidores", skip)
+
+
+@app.get("/u/{username}/seguindo", response_class=HTMLResponse)
+async def following_page(request: Request, api: Api, username: str, skip: int = 0):
+    return await _follow_list(request, api, username, "seguindo", skip)
 
 
 @app.get("/healthz")

@@ -156,3 +156,32 @@ def test_username_signup_rules_and_login(web):
     # login pelo nome de usuário, em qualquer caixa
     response = web().post("/login", data={"login": "ALICE", "password": "secret123"})
     assert response.status_code == 303
+
+
+def test_follow_flow_and_following_feed(web):
+    alice, bob, carol = web(), web(), web()
+    _register(alice, "alice@example.com")
+    _register(bob, "bob@example.com")
+    _register(carol, "carol@example.com")
+    bob.post("/posts", data={"title": "post do bob", "content": "c"}, headers=HTMX)
+    carol.post("/posts", data={"title": "post da carol", "content": "c"}, headers=HTMX)
+
+    assert "post do bob" not in alice.get("/?feed=seguindo").text
+
+    followed = alice.put("/u/bob/follow", headers=HTMX)
+    assert followed.status_code == 200, followed.text
+    assert 'class="count bump">1<' in followed.text
+    assert 'hx-delete="/u/bob/follow"' in followed.text
+
+    feed = alice.get("/?feed=seguindo").text
+    assert "post do bob" in feed and "post da carol" not in feed
+
+    # bob vê que a alice o segue e pode seguir de volta
+    bob_profile_of_alice = bob.get("/u/alice").text
+    assert "segue você" in bob_profile_of_alice and "Seguir de volta" in bob_profile_of_alice
+
+    followers = alice.get("/u/bob/seguidores").text
+    assert 'href="/u/alice"' in followers
+
+    alice.delete("/u/bob/follow", headers=HTMX)
+    assert "post do bob" not in alice.get("/?feed=seguindo").text

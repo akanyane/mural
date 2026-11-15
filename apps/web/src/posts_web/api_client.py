@@ -17,10 +17,12 @@ from posts_schemas import (
     UsernameAvailability,
     UserOut,
     UserProfile,
+    UserPublic,
 )
 
 _post_list = TypeAdapter(list[PostOut])
 _comment_list = TypeAdapter(list[CommentOut])
+_user_list = TypeAdapter(list[UserPublic])
 
 
 class ApiError(Exception):
@@ -69,11 +71,19 @@ class ApiClient:
         return UserOut.model_validate((await self._request("GET", "/users/me")).json())
 
     async def list_posts(
-        self, *, search: str = "", skip: int = 0, limit: int = 10, owner_id: int | None = None
+        self,
+        *,
+        search: str = "",
+        skip: int = 0,
+        limit: int = 10,
+        owner_id: int | None = None,
+        following: bool = False,
     ) -> list[PostOut]:
         params: dict = {"search": search, "skip": skip, "limit": limit}
         if owner_id is not None:
             params["owner_id"] = owner_id
+        if following:
+            params["following"] = "true"
         response = await self._request("GET", "/posts/", params=params)
         return _post_list.validate_python(response.json())
 
@@ -116,3 +126,21 @@ class ApiClient:
             "GET", "/users/username-available", params={"username": username}
         )
         return UsernameAvailability.model_validate(response.json())
+
+    async def follow(self, username: str) -> None:
+        await self._request("PUT", f"/users/{username}/follow")
+
+    async def unfollow(self, username: str) -> None:
+        await self._request("DELETE", f"/users/{username}/follow")
+
+    async def followers(self, username: str, *, skip: int = 0, limit: int = 30) -> list[UserPublic]:
+        response = await self._request(
+            "GET", f"/users/{username}/followers", params={"skip": skip, "limit": limit}
+        )
+        return _user_list.validate_python(response.json())
+
+    async def following(self, username: str, *, skip: int = 0, limit: int = 30) -> list[UserPublic]:
+        response = await self._request(
+            "GET", f"/users/{username}/following", params={"skip": skip, "limit": limit}
+        )
+        return _user_list.validate_python(response.json())

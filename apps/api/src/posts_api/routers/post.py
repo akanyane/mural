@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, status
-from sqlalchemy import Row, Select, func, select
+from sqlalchemy import Row, Select, func, or_, select
 
 import posts_schemas as schemas
 
@@ -68,6 +68,7 @@ def get_posts(
     skip: Annotated[int, Query(ge=0)] = 0,
     search: str = "",
     owner_id: int | None = None,
+    following: bool = False,
 ):
     stmt = (
         _posts_query(current_user.id)
@@ -80,6 +81,14 @@ def get_posts(
     )
     if owner_id is not None:
         stmt = stmt.where(models.Post.owner_id == owner_id)
+    if following:
+        # Feed "Seguindo": posts de quem eu sigo, mais os meus.
+        followed_ids = select(models.Follow.followed_id).where(
+            models.Follow.follower_id == current_user.id
+        )
+        stmt = stmt.where(
+            or_(models.Post.owner_id.in_(followed_ids), models.Post.owner_id == current_user.id)
+        )
     return [_to_post_out(row) for row in db.execute(stmt).all()]
 
 
