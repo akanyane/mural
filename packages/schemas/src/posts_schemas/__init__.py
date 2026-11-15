@@ -74,12 +74,44 @@ class UserCreate(BaseModel):
 
 
 class UserOut(BaseModel):
+    """O próprio usuário (inclui o email). Só para /users/me e o cadastro."""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     email: EmailStr
     username: str
+    display_name: str | None = None
+    bio: str | None = None
     created_at: datetime
+
+
+class UserPublic(BaseModel):
+    """Perfil público de qualquer usuário (sem email)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    username: str
+    display_name: str | None = None
+    bio: str | None = None
+    created_at: datetime
+
+
+DISPLAY_NAME_MAX_LENGTH = 50
+BIO_MAX_LENGTH = 160
+
+
+class ProfileUpdate(BaseModel):
+    """Campos editáveis do perfil (PATCH: só os enviados mudam)."""
+
+    username: Username | None = None
+    display_name: Annotated[
+        str | None, StringConstraints(strip_whitespace=True, max_length=DISPLAY_NAME_MAX_LENGTH)
+    ] = None
+    bio: Annotated[
+        str | None, StringConstraints(strip_whitespace=True, max_length=BIO_MAX_LENGTH)
+    ] = None
 
 
 class PostBase(BaseModel):
@@ -102,7 +134,7 @@ class PostRead(PostBase):
     id: int
     created_at: datetime
     owner_id: int
-    owner: UserOut
+    owner: UserPublic
 
 
 class PostOut(BaseModel):
@@ -144,23 +176,13 @@ class CommentOut(BaseModel):
     created_at: datetime
     post_id: int
     owner_id: int
-    owner: UserOut
-
-
-class UserPublic(BaseModel):
-    """Dados públicos de um usuário (sem email), usados nas listas de seguidores."""
-
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    username: str
-    created_at: datetime
+    owner: UserPublic
 
 
 class UserProfile(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    user: UserOut
+    user: UserPublic
     posts: int
     votes_received: int
     comments: int
@@ -175,3 +197,21 @@ class UsernameAvailability(BaseModel):
     username: str
     available: bool
     reason: str | None = None
+
+
+class SessionOut(BaseModel):
+    """Uma sessão de login ativa (sem o token)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    created_at: datetime
+    last_used_at: datetime
+    expires_at: datetime
+    user_agent: str | None = None
+    ip_address: str | None = None
+    current: bool = False  # é a sessão que fez esta requisição
+
+
+class RevokedSessions(BaseModel):
+    revoked: int
