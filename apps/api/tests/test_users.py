@@ -42,7 +42,8 @@ def test_get_user(client, user):
     response = client.get(f"/users/{user['id']}")
 
     assert response.status_code == 200
-    assert response.json()["email"] == user["email"]
+    assert response.json()["username"] == user["username"]
+    assert "email" not in response.json()  # GET /users/{id} é público
 
 
 def test_get_missing_user_returns_404(client):
@@ -71,7 +72,8 @@ def test_profile_stats(client, user, auth_headers, other_auth_headers, posts):
 
     assert response.status_code == 200
     body = response.json()
-    assert body["user"]["email"] == "alice@example.com"
+    assert body["user"]["username"] == "alice"
+    assert "email" not in body["user"]
     assert (body["posts"], body["votes_received"], body["comments"]) == (2, 3, 1)
 
 

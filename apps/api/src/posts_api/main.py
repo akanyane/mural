@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import auth, comment, post, user, vote
+from .routers import auth, comment, post, session, user, vote
 
 app = FastAPI(title="Posts API")
 
@@ -18,3 +18,4 @@ app.include_router(user.router)
 app.include_router(auth.router)
 app.include_router(vote.router)
 app.include_router(comment.router)
+app.include_router(session.router)

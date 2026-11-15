@@ -5,7 +5,7 @@
   </a>
   <div class="comment-body">
     <div class="comment-meta">
-      <a href="/u/{{ comment.owner.username }}" class="comment-author">{{ comment.owner.username }}</a>
+      <a href="/u/{{ comment.owner.username }}" class="comment-author">{{ comment.owner.display_name or comment.owner.username }}</a>
       <time datetime="{{ comment.created_at.isoformat() }}" title="{{ comment.created_at | datetime }}">{{ comment.created_at | timeago }}</time>
     </div>
     <p class="comment-text">{{ comment.content }}</p>

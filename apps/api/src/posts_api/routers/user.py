@@ -27,7 +27,9 @@ def _username_taken(username: str) -> HTTPException:
 
 def _get_user_by_username(db: DbSession, username: str) -> models.User:
     normalized = schemas.normalize_username(username)
-    user = db.scalar(select(models.User).where(models.User.username == normalized))
+    user = db.scalar(
+        select(models.User).join(models.User.profile).where(models.Profile.username == normalized)
+    )
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"User {normalized} was not found"
@@ -41,7 +43,9 @@ def _follow_exists(db: DbSession, follower_id: int, followed_id: int) -> bool:
 
 
 def _username_exists(db: DbSession, username: str) -> bool:
-    return db.scalar(select(models.User.id).where(models.User.username == username)) is not None
+    return (
+        db.scalar(select(models.Profile.id).where(models.Profile.username == username)) is not None
+    )
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=schemas.UserOut)
@@ -52,8 +56,11 @@ def create_user(user: schemas.UserCreate, db: DbSession):
     if _username_exists(db, user.username):
         raise _username_taken(user.username)
 
+    # Conta (users) e perfil público (profiles) nascem juntos, na mesma transação.
     new_user = models.User(
-        email=user.email, username=user.username, password=utils.hash_password(user.password)
+        email=user.email,
+        password=utils.hash_password(user.password),
+        profile=models.Profile(username=user.username),
     )
     db.add(new_user)
     try:
@@ -85,7 +92,32 @@ def username_available(username: str, db: DbSession):
     return {"username": normalized, "available": True}
 
 
-@router.get("/{id}", response_model=schemas.UserOut)
+@router.patch("/me/profile", response_model=schemas.UserOut)
+def update_my_profile(changes: schemas.ProfileUpdate, db: DbSession, current_user: CurrentUser):
+    """Edita o próprio perfil. Só os campos enviados mudam; "" limpa nome e bio."""
+    profile = current_user.profile
+    data = changes.model_dump(exclude_unset=True)
+
+    new_username = data.pop("username", None)  # null não apaga o nome de usuário
+    if new_username is not None and new_username != profile.username:
+        if _username_exists(db, new_username):
+            raise _username_taken(new_username)
+        profile.username = new_username
+
+    for field in ("display_name", "bio"):
+        if field in data:
+            setattr(profile, field, data[field] or None)  # "" vira NULL
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()  # corrida: alguém pegou o mesmo username agora
+        raise _username_taken(new_username or profile.username) from None
+    db.refresh(current_user)
+    return current_user
+
+
+@router.get("/{id}", response_model=schemas.UserPublic)
 def get_user(id: int, db: DbSession):
     user = db.get(models.User, id)
     if user is None:

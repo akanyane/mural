@@ -185,3 +185,52 @@ def test_follow_flow_and_following_feed(web):
 
     alice.delete("/u/bob/follow", headers=HTMX)
     assert "post do bob" not in alice.get("/?feed=seguindo").text
+
+
+def test_logout_invalidates_the_token_on_the_server(web):
+    alice = web()
+    _register(alice, "alice@example.com")
+    token = alice.cookies["access_token"]
+
+    alice.post("/logout")
+
+    # quem tivesse copiado o cookie não consegue mais usá-lo
+    thief = web()
+    thief.cookies.set("access_token", token)
+    response = thief.get("/")
+    assert response.status_code == 303 and response.headers["location"] == "/login"
+
+
+def test_sign_out_other_sessions_immediately(web):
+    laptop = web()
+    _register(laptop, "alice@example.com")
+    phone = web()
+    login = phone.post("/login", data={"login": "alice", "password": "secret123"})
+    assert login.status_code == 303
+    assert phone.get("/").status_code == 200
+
+    sessions = laptop.get("/sessoes").text
+    assert sessions.count('class="session-row') == 2 and "este dispositivo" in sessions
+
+    assert laptop.post("/sessoes/encerrar-outras").headers["location"] == "/sessoes?revoked=1"
+
+    # o celular cai na próxima requisição; o notebook continua logado
+    assert phone.get("/").headers["location"] == "/login"
+    assert laptop.get("/").status_code == 200
+
+
+def test_edit_profile_end_to_end(web):
+    alice = web()
+    _register(alice, "alice@example.com")
+
+    response = alice.post(
+        "/perfil/editar",
+        data={"username": "alice.s", "display_name": "Alice Silva", "bio": "Café e código."},
+    )
+    assert response.headers["location"] == "/u/alice.s"
+
+    profile = alice.get("/u/alice.s").text
+    assert "<h1>Alice Silva" in profile and "Café e código." in profile
+    assert (
+        alice.post("/login", data={"login": "alice.s", "password": "secret123"}).status_code == 303
+    )

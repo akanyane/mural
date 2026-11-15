@@ -3,8 +3,8 @@
     <a href="/u/{{ user.username }}" class="user-link">
       {% with name = user.username %}{% include "partials/avatar.html" %}{% endwith %}
       <span class="user-names">
-        <strong>{{ user.username }}</strong>
-        <span class="mono">membro desde {{ user.created_at | date }}</span>
+        <strong>{{ user.display_name or user.username }}</strong>
+        <span class="mono">@{{ user.username }}</span>
       </span>
       {% if me and me.id == user.id %}<span class="badge badge-accent">você</span>{% endif %}
     </a>

@@ -13,7 +13,8 @@ def test_create_and_list_comments_in_order(client, auth_headers, other_auth_head
     assert first.status_code == 201
     body = first.json()
     assert body["content"] == "primeiro"  # espaços nas pontas são removidos
-    assert body["owner"]["email"] == "bob@example.com"
+    assert body["owner"]["username"] == "bob"
+    assert "email" not in body["owner"]  # autores são públicos, sem email
 
     listed = client.get(f"/posts/{post_id}/comments", headers=auth_headers).json()
     assert [c["content"] for c in listed] == ["primeiro", "segundo"]

@@ -1160,6 +1160,168 @@ kbd {
   padding: 12px;
 }
 
+/* ---------- Perfil: bio e ações ---------- */
+.profile-bio {
+  margin-top: 16px;
+  max-width: 56ch;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.profile-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.btn .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.btn-danger:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+/* ---------- Formulários em card (editar perfil) ---------- */
+.form-card {
+  padding: 28px;
+  animation: card-in 0.45s var(--ease-out) backwards;
+}
+
+.form-card h1 {
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.form-card > .muted {
+  margin: 6px 0 22px;
+}
+
+.form-card form {
+  display: grid;
+  gap: 18px;
+}
+
+.field textarea {
+  padding: 12px 14px;
+  border: var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: 400 15px/1.5 var(--font-body);
+  text-transform: none;
+  letter-spacing: normal;
+  resize: vertical;
+  transition:
+    box-shadow 0.15s var(--ease-out),
+    transform 0.15s var(--ease-out);
+}
+
+.field textarea:focus {
+  outline: none;
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* ---------- Sessões ---------- */
+.sessions {
+  padding: 24px;
+}
+
+.sessions-head h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.sessions-head h1 .icon {
+  width: 26px;
+  height: 26px;
+}
+
+.sessions-head .muted {
+  margin-top: 6px;
+}
+
+.notice {
+  margin-top: 16px;
+  padding: 10px 14px;
+  border: 2px solid var(--ink);
+  background: var(--yellow);
+  color: #1a1714;
+  font-weight: 600;
+  animation: slide-in 0.25s var(--ease-out);
+}
+
+.session-list {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  border: var(--border);
+}
+
+.session-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  animation: slide-in 0.3s var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+
+.session-row + .session-row {
+  border-top: 2px solid var(--line-soft);
+}
+
+.session-row.is-current {
+  background: var(--surface-2);
+}
+
+.session-row.htmx-swapping {
+  animation: card-out 0.3s var(--ease-out) forwards;
+}
+
+.session-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border: var(--border);
+  background: var(--surface);
+}
+
+.session-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.session-info .mono {
+  flex-basis: 100%;
+  text-transform: none;
+}
+
+.sessions-footer {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 /* ---------- Estado vazio ---------- */
 .empty-state {
   padding: 40px 24px;

@@ -13,6 +13,9 @@ from posts_schemas import (
     PostOut,
     PostRead,
     PostUpdate,
+    ProfileUpdate,
+    RevokedSessions,
+    SessionOut,
     Token,
     UsernameAvailability,
     UserOut,
@@ -23,6 +26,7 @@ from posts_schemas import (
 _post_list = TypeAdapter(list[PostOut])
 _comment_list = TypeAdapter(list[CommentOut])
 _user_list = TypeAdapter(list[UserPublic])
+_session_list = TypeAdapter(list[SessionOut])
 
 
 class ApiError(Exception):
@@ -47,17 +51,32 @@ class ApiClient:
         self.http = http
         self.token = token
 
-    async def _request(self, method: str, url: str, **kwargs) -> httpx2.Response:
-        headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}
+    async def _request(
+        self, method: str, url: str, *, headers: dict | None = None, **kwargs
+    ) -> httpx2.Response:
+        headers = dict(headers or {})
+        if self.token:
+            headers["Authorization"] = f"Bearer {self.token}"
         response = await self.http.request(method, url, headers=headers, **kwargs)
         if response.is_error:
             raise ApiError(response.status_code, _error_detail(response))
         return response
 
-    async def login(self, login: str, password: str) -> str:
-        """`login` é o email ou o nome de usuário."""
+    async def login(
+        self, login: str, password: str, *, user_agent: str | None = None, ip: str | None = None
+    ) -> str:
+        """`login` é o email ou o nome de usuário.
+
+        O navegador e o IP de quem está logando são repassados para a API, que os
+        mostra na lista de sessões ("Chrome · Windows", IP).
+        """
+        headers = {}
+        if user_agent:
+            headers["User-Agent"] = user_agent
+        if ip:
+            headers["X-Forwarded-For"] = ip
         response = await self._request(
-            "POST", "/login", data={"username": login, "password": password}
+            "POST", "/login", data={"username": login, "password": password}, headers=headers
         )
         return Token.model_validate(response.json()).access_token
 
@@ -144,3 +163,22 @@ class ApiClient:
             "GET", f"/users/{username}/following", params={"skip": skip, "limit": limit}
         )
         return _user_list.validate_python(response.json())
+
+    async def logout(self) -> None:
+        await self._request("POST", "/logout")
+
+    async def sessions(self) -> list[SessionOut]:
+        return _session_list.validate_python((await self._request("GET", "/sessions/")).json())
+
+    async def revoke_session(self, session_id: int) -> None:
+        await self._request("DELETE", f"/sessions/{session_id}")
+
+    async def revoke_other_sessions(self) -> int:
+        response = await self._request("DELETE", "/sessions/others")
+        return RevokedSessions.model_validate(response.json()).revoked
+
+    async def update_profile(self, changes: ProfileUpdate) -> UserOut:
+        response = await self._request(
+            "PATCH", "/users/me/profile", json=changes.model_dump(exclude_unset=True)
+        )
+        return UserOut.model_validate(response.json())

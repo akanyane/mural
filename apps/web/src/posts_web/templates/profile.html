@@ -6,12 +6,19 @@
   <div class="profile-head">
     {% with name = profile.user.username, size = "xl" %}{% include "partials/avatar.html" %}{% endwith %}
     <div class="profile-id">
-      <h1>{{ profile.user.username }}{% if me and me.id == profile.user.id %} <span class="badge badge-accent">você</span>{% endif %}</h1>
-      <p class="muted">@{{ profile.user.username }}{% if me and me.id == profile.user.id %} · {{ profile.user.email }} <span class="mono">(só você vê)</span>{% endif %}</p>
+      <h1>{{ profile.user.display_name or profile.user.username }}{% if me and me.id == profile.user.id %} <span class="badge badge-accent">você</span>{% endif %}</h1>
+      <p class="muted">@{{ profile.user.username }}{% if me and me.id == profile.user.id %} · {{ me.email }} <span class="mono">(só você vê)</span>{% endif %}</p>
       <p class="mono">membro desde {{ profile.user.created_at | date }}</p>
     </div>
   </div>
+  {% if profile.user.bio %}<p class="profile-bio">{{ profile.user.bio }}</p>{% endif %}
   {% include "partials/profile_social.html" %}
+  {% if me and me.id == profile.user.id %}
+    <div class="profile-actions">
+      <a href="/perfil/editar" class="btn btn-ghost btn-sm">{{ icon.pencil() }}<span>Editar perfil</span></a>
+      <a href="/sessoes" class="btn btn-ghost btn-sm">{{ icon.shield() }}<span>Sessões ativas</span></a>
+    </div>
+  {% endif %}
   <dl class="stats">
     <div class="stat"><dt>Posts</dt><dd>{{ profile.posts }}</dd></div>
     <div class="stat"><dt>Votos recebidos</dt><dd>{{ profile.votes_received }}</dd></div>
@@ -20,7 +27,7 @@
 </section>
 
 <div class="feed-toolbar">
-  <h2 class="feed-title">{% if me and me.id == profile.user.id %}Seus posts{% else %}Posts de {{ profile.user.username }}{% endif %}</h2>
+  <h2 class="feed-title">{% if me and me.id == profile.user.id %}Seus posts{% else %}Posts de {{ profile.user.display_name or profile.user.username }}{% endif %}</h2>
   <a href="/" class="btn btn-ghost btn-sm">← Voltar ao mural</a>
 </div>
 

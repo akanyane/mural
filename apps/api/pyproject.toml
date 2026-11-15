@@ -9,7 +9,6 @@ dependencies = [
     "fastapi>=0.163.0",
     "posts-schemas",
     "pydantic-settings>=2.16.3",
-    "pyjwt>=2.15.1",
     "python-multipart>=0.0.33",
     "sqlalchemy>=2.1.8",
     "uvicorn[standard]>=0.54.0",
