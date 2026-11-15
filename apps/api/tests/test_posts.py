@@ -8,7 +8,8 @@ def test_list_posts_newest_first_with_votes_and_owner(client, auth_headers, post
     assert [item["Post"]["id"] for item in body] == [post["id"] for post in reversed(posts)]
     assert [item["votes"] for item in body] == [0, 0, 1]
     assert [item["voted"] for item in body] == [False, False, True]
-    assert body[-1]["Post"]["owner"]["email"] == "alice@example.com"
+    assert body[-1]["Post"]["owner"]["username"] == "alice"
+    assert "email" not in body[-1]["Post"]["owner"]
 
 
 def test_voted_flag_is_per_user(client, auth_headers, other_auth_headers, posts):

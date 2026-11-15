@@ -1,20 +1,22 @@
-from datetime import UTC, datetime, timedelta
-
-import jwt
 import pytest
 
 from posts_api import models, utils
-from posts_api.config import settings
+from posts_api.sessions import hash_token
 
 
-def test_login_returns_token_for_user(client, user):
+def test_login_returns_opaque_session_token(client, db_session, user):
     response = client.post("/login", data={"username": user["email"], "password": user["password"]})
 
     assert response.status_code == 200
     body = response.json()
     assert body["token_type"] == "bearer"
-    payload = jwt.decode(body["access_token"], settings.secret_key, algorithms=[settings.algorithm])
-    assert payload["sub"] == str(user["id"])
+    token = body["access_token"]
+    assert len(token) >= 40 and token.count(".") == 0  # não é mais um JWT
+
+    # O banco guarda só o SHA-256 do token, nunca o token.
+    session = db_session.query(models.UserSession).one()
+    assert session.token_hash == hash_token(token) != token
+    assert session.user_id == user["id"]
 
 
 @pytest.mark.parametrize(
@@ -32,19 +34,7 @@ def test_protected_route_without_token(client):
 
 
 def test_protected_route_with_garbage_token(client):
-    response = client.get("/posts/", headers={"Authorization": "Bearer not-a-jwt"})
-
-    assert response.status_code == 401
-
-
-def test_protected_route_with_expired_token(client, user):
-    expired = jwt.encode(
-        {"sub": str(user["id"]), "exp": datetime.now(UTC) - timedelta(minutes=1)},
-        settings.secret_key,
-        algorithm=settings.algorithm,
-    )
-
-    response = client.get("/posts/", headers={"Authorization": f"Bearer {expired}"})
+    response = client.get("/posts/", headers={"Authorization": "Bearer not-a-session"})
 
     assert response.status_code == 401
 

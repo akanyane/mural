@@ -45,7 +45,8 @@ def test_username_migration_backfills_existing_users(engine, make_alembic_config
             )
         )
         command.upgrade(config, "head")
-        usernames = connection.execute(text("SELECT username FROM users ORDER BY id")).scalars()
+        # desde a 0006 o username mora em profiles (mesmo id do usuário)
+        usernames = connection.execute(text("SELECT username FROM profiles ORDER BY id")).scalars()
         usernames = list(usernames)
 
     assert usernames == ["ana.silva", "ana.silva_2", "user12", "jo_o_tag"]
@@ -55,17 +56,16 @@ def test_username_migration_backfills_existing_users(engine, make_alembic_config
 def test_migrations_preserve_posts_votes_and_comments(engine, make_alembic_config):
     """Regressão: no SQLite, alterar "users" (batch mode) recria a tabela; com as
     FKs ligadas o DROP da tabela antiga apagava em cascata posts, votos e comentários."""
-    tables = ("users", "posts", "votes", "comments")
+    tables = ("users", "posts", "votes", "comments")  # existem em todas as revisões
 
     def counts(connection):
         return {t: connection.execute(text(f"SELECT count(*) FROM {t}")).scalar() for t in tables}
 
     with engine.begin() as connection:
         connection.execute(
-            text(
-                "INSERT INTO users (id, email, username, password) VALUES (1, 'a@x.com', 'a', 'h')"
-            )
+            text("INSERT INTO users (id, email, password) VALUES (1, 'a@x.com', 'h')")
         )
+        connection.execute(text("INSERT INTO profiles (id, username) VALUES (1, 'a')"))
         connection.execute(
             text("INSERT INTO posts (id, title, content, owner_id) VALUES (1, 't', 'c', 1)")
         )
@@ -78,13 +78,46 @@ def test_migrations_preserve_posts_votes_and_comments(engine, make_alembic_confi
     assert before == {"users": 1, "posts": 1, "votes": 1, "comments": 1}
 
     # 0003 recria "users" nos dois sentidos (drop/add column).
-    for target in ("0002", "head"):
-        with engine.connect() as connection:
-            command.downgrade(make_alembic_config(connection), target) if target != "head" else (
-                command.upgrade(make_alembic_config(connection), target)
-            )
-            connection.commit()
-        with engine.connect() as connection:
-            assert counts(connection) == before, f"dados perdidos ao migrar para {target}"
-            # as FKs voltam a valer depois das migrations
-            assert connection.execute(text("PRAGMA foreign_keys")).scalar() == 1
+    # 0003 e 0006 recriam "users" (batch mode) nos dois sentidos.
+    with engine.connect() as connection:
+        command.downgrade(make_alembic_config(connection), "0002")
+        connection.commit()
+    with engine.connect() as connection:
+        assert counts(connection) == before, "dados perdidos ao descer para 0002"
+
+    with engine.connect() as connection:
+        command.upgrade(make_alembic_config(connection), "head")
+        connection.commit()
+    with engine.connect() as connection:
+        assert counts(connection) == before, "dados perdidos ao subir para head"
+        assert connection.execute(text("SELECT count(*) FROM profiles")).scalar() == 1
+        # as FKs voltam a valer depois das migrations
+        assert connection.execute(text("PRAGMA foreign_keys")).scalar() == 1
+
+
+def test_profiles_migration_moves_usernames_and_back(engine, make_alembic_config):
+    with engine.begin() as connection:
+        connection.execute(
+            text("INSERT INTO users (id, email, password) VALUES (1, 'a@x.com', 'h')")
+        )
+        connection.execute(text("INSERT INTO profiles (id, username) VALUES (1, 'ana')"))
+        connection.execute(
+            text("INSERT INTO posts (id, title, content, owner_id) VALUES (1, 't', 'c', 1)")
+        )
+
+    with engine.connect() as connection:
+        command.downgrade(make_alembic_config(connection), "0005")
+        connection.commit()
+    with engine.connect() as connection:
+        assert connection.execute(text("SELECT username FROM users")).scalar() == "ana"
+        assert "profiles" not in inspect(connection).get_table_names()
+
+    with engine.connect() as connection:
+        command.upgrade(make_alembic_config(connection), "head")
+        connection.commit()
+    with engine.connect() as connection:
+        assert (
+            connection.execute(text("SELECT username FROM profiles WHERE id = 1")).scalar() == "ana"
+        )
+        assert "username" not in {c["name"] for c in inspect(connection).get_columns("users")}
+        assert connection.execute(text("SELECT count(*) FROM posts")).scalar() == 1
