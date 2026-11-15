@@ -147,6 +147,16 @@ class CommentOut(BaseModel):
     owner: UserOut
 
 
+class UserPublic(BaseModel):
+    """Dados públicos de um usuário (sem email), usados nas listas de seguidores."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    username: str
+    created_at: datetime
+
+
 class UserProfile(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -154,6 +164,11 @@ class UserProfile(BaseModel):
     posts: int
     votes_received: int
     comments: int
+    followers: int = 0
+    following: int = 0
+    # Do ponto de vista do usuário autenticado:
+    is_following: bool = False  # eu sigo este usuário
+    follows_you: bool = False  # este usuário me segue
 
 
 class UsernameAvailability(BaseModel):
