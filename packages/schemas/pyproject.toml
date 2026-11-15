@@ -1,6 +1,6 @@
 [project]
 name = "posts-schemas"
-version = "0.2.0"
+version = "0.3.0"
 description = "Modelos Pydantic compartilhados entre a API e o frontend."
 requires-python = ">=3.12"
 dependencies = [

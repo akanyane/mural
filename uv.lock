@@ -505,7 +505,7 @@ wheels = [
 
 [[package]]
 name = "posts-api"
-version = "0.2.0"
+version = "0.3.0"
 source = { editable = "apps/api" }
 dependencies = [
     { name = "alembic" },
@@ -534,7 +534,7 @@ requires-dist = [
 
 [[package]]
 name = "posts-schemas"
-version = "0.1.0"
+version = "0.3.0"
 source = { editable = "packages/schemas" }
 dependencies = [
     { name = "pydantic", extra = ["email"] },
@@ -545,7 +545,7 @@ requires-dist = [{ name = "pydantic", extras = ["email"], specifier = ">=2.14" }
 
 [[package]]
 name = "posts-web"
-version = "0.1.0"
+version = "0.3.0"
 source = { editable = "apps/web" }
 dependencies = [
     { name = "fastapi" },
