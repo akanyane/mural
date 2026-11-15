@@ -17,7 +17,7 @@ A [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/): one `
 
 ```
 apps/
-  api/        posts-api      FastAPI + SQLAlchemy + Alembic (SQLite by default), JWT auth
+  api/        posts-api      FastAPI + SQLAlchemy + Alembic (SQLite by default), server-side sessions
   web/        posts-web      FastAPI + Jinja2 + HTMX frontend; talks to the API over HTTP
 packages/
   schemas/    posts-schemas  Pydantic models shared by both apps (the API contract)
@@ -25,8 +25,20 @@ tests/
   e2e/        web + real API wired in-memory (ASGITransport + temporary SQLite)
 ```
 
-The web app never touches the database: it calls the API with `httpx2`, keeps the JWT in an
-`HttpOnly`, `SameSite=Lax` cookie and validates every response with `posts-schemas`.
+The web app never touches the database: it calls the API with `httpx2`, keeps the session token
+in an `HttpOnly`, `SameSite=Lax` cookie and validates every response with `posts-schemas`.
+
+### Auth model
+
+- **`users`** holds only authentication data (e-mail, bcrypt password hash) and is never exposed
+  publicly. **`profiles`** holds public data (`username`, `display_name`, `bio`) with the same id
+  (1:1, `ON DELETE CASCADE`), similar to Supabase's `auth.users` / `public.profiles`.
+- **Sessions are opaque and server-side.** Login returns a random 256-bit token, and the
+  `sessions` table stores only its SHA-256 hash. Every authenticated request looks the session up,
+  so logging out or revoking a session (`DELETE /sessions/{id}`, `DELETE /sessions/others`) takes
+  effect immediately. There are no JWTs and no refresh tokens.
+- **Expiration is sliding:** a session expires after 30 days without use, with a hard limit of
+  90 days. Both limits are configurable.
 
 ## Development
 
@@ -35,7 +47,7 @@ Requires [uv](https://docs.astral.sh/uv/).
 ```bash
 uv sync --all-packages                       # install every workspace member + dev tools
 
-cp apps/api/.env.example apps/api/.env       # set SECRET_KEY
+cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env
 
 # API on :8000 (creates apps/api/posts.db)
