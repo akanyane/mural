@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.0](https://github.com/akanyane/mural/compare/v0.3.0...v0.4.0) (2026-11-15)
+
+
+### Features
+
+* **api:** follow and unfollow users ([4fe911f](https://github.com/akanyane/mural/commit/4fe911fb0a4147b9c12577a90ca252d46c89d39a))
+* follow users and a following feed ([41e49fb](https://github.com/akanyane/mural/commit/41e49fbd6e6c92e71664022f53ffb571f5498bdb))
+* **schemas:** add follower counts and a public user model ([614765c](https://github.com/akanyane/mural/commit/614765c2339423fb1df373a359faa1a3f1f92f43))
+* **web:** follow button, follower lists and a following feed ([ec408f3](https://github.com/akanyane/mural/commit/ec408f33b525f383740f280218bb73574ee64272))
+
 ## [0.3.0](https://github.com/akanyane/mural/releases/tag/v0.3.0) (2026-11-15)
 
 First release of Mural as a monorepo. The whole repository (API, web app and shared schemas)
