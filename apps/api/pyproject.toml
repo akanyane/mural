@@ -1,6 +1,6 @@
 [project]
 name = "posts-api"
-version = "0.4.0"
+version = "0.5.0"
 description = "API de posts com autenticação JWT e votos (FastAPI + SQLite)."
 requires-python = ">=3.12"
 dependencies = [
