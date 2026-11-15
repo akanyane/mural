@@ -1,11 +1,82 @@
-# Posts API
+# Mural
 
-## An empowering solution that enables users to seamlessly share their thoughts and engage with content in a social environment. This versatile API provides a robust platform for users to post texts, fostering a vibrant community atmosphere.
+## An empowering solution that enables users to seamlessly share their thoughts and engage with content in a social environment. Users post texts, vote on each other's posts and search the feed.
 
 ## Technologies
 ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
-![Heroku](https://img.shields.io/badge/heroku-%23430098.svg?style=for-the-badge&logo=heroku&logoColor=white)
+![SQLite](https://img.shields.io/badge/sqlite-%2307405e.svg?style=for-the-badge&logo=sqlite&logoColor=white)
+![HTMX](https://img.shields.io/badge/htmx-%233366CC.svg?style=for-the-badge&logo=htmx&logoColor=white)
+![uv](https://img.shields.io/badge/uv-%23DE5FE9.svg?style=for-the-badge&logo=uv&logoColor=white)
 ![Git](https://img.shields.io/badge/git-%23F05033.svg?style=for-the-badge&logo=git&logoColor=white)
 ![GitHub](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white)
-![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)
+
+## Monorepo layout
+
+A [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/): one `uv.lock`, one `.venv`, three packages.
+
+```
+apps/
+  api/        posts-api      FastAPI + SQLAlchemy + Alembic (SQLite by default), JWT auth
+  web/        posts-web      FastAPI + Jinja2 + HTMX frontend; talks to the API over HTTP
+packages/
+  schemas/    posts-schemas  Pydantic models shared by both apps (the API contract)
+tests/
+  e2e/        web + real API wired in-memory (ASGITransport + temporary SQLite)
+```
+
+The web app never touches the database: it calls the API with `httpx2`, keeps the JWT in an
+`HttpOnly`, `SameSite=Lax` cookie and validates every response with `posts-schemas`.
+
+## Development
+
+Requires [uv](https://docs.astral.sh/uv/).
+
+```bash
+uv sync --all-packages                       # install every workspace member + dev tools
+
+cp apps/api/.env.example apps/api/.env       # set SECRET_KEY
+cp apps/web/.env.example apps/web/.env
+
+# API on :8000 (creates apps/api/posts.db)
+cd apps/api && uv run alembic upgrade head && uv run uvicorn posts_api.main:app --reload
+
+# Web on :8001 (in another terminal)
+cd apps/web && uv run uvicorn posts_web.main:app --reload --port 8001
+```
+
+- Frontend: http://localhost:8001
+- API docs: http://localhost:8000/docs
+
+Adding a dependency to one package: `uv add --package posts-web <lib>`.
+
+### Tests and lint
+
+```bash
+uv run pytest            # api + web + e2e
+uv run pytest apps/web   # just one package
+uv run ruff check .
+uv run ruff format .
+```
+
+## Releases
+
+Versioning is automated by [release-please](https://github.com/googleapis/release-please)
+(`.github/workflows/release-please.yml`). Each package (`posts-api`, `posts-web`,
+`posts-schemas`) has its own version, `CHANGELOG.md` and tag (e.g. `posts-api-v0.3.0`).
+
+1. Write commits following [Conventional Commits](https://www.conventionalcommits.org/):
+   `feat(web): ...`, `fix(api): ...`, `feat(api)!: ...` for breaking changes.
+2. On every push to `main`, release-please opens/updates a release PR with the version bumps
+   and changelogs (only for packages whose files changed). The workflow also syncs `uv.lock`.
+3. Merging that PR creates the tags and GitHub releases.
+
+While a package is `0.x`, `feat` bumps the minor version and breaking changes do not jump to `1.0`.
+
+## Deploy notes
+
+Each app has its own `Procfile` (the API runs `alembic upgrade head` in the release phase).
+SQLite stores data in a local file, so it needs a host with a **persistent disk**: on platforms
+with an ephemeral filesystem (e.g. Heroku dynos) the database is wiped on every restart/deploy.
+Pointing `DATABASE_URL` at PostgreSQL (plus adding a driver such as `psycopg[binary]`) works
+without code changes.

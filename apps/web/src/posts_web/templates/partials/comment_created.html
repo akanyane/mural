@@ -1,0 +1,4 @@
+{% include "partials/comment.html" %}
+{#- Atualiza o contador no card e remove o aviso de "nenhum comentário" (swaps out of band). -#}
+{% include "partials/comment_count.html" %}
+<li id="no-comments-{{ post_id }}" hx-swap-oob="delete"></li>

@@ -1,0 +1,20 @@
+{% import "partials/icons.html" as icon %}
+{% for item in posts %}
+  {#- "i" escalona a animação de entrada dos cards. -#}
+  {% with i = loop.index0 %}{% include "partials/post_card.html" %}{% endwith %}
+{% else %}
+  {% if skip == 0 %}
+    <div id="empty-feed" class="card empty-state">
+      <div class="empty-icon">{{ icon.sparkle() }}</div>
+      <p><strong>Nenhum post encontrado.</strong></p>
+      <p class="muted">{% if search %}Tente buscar por outro título.{% elif owner_id %}Nada por aqui ainda.{% else %}Que tal escrever o primeiro?{% endif %}</p>
+    </div>
+  {% endif %}
+{% endfor %}
+{% if next_skip is not none %}
+  <button class="btn btn-ghost btn-block load-more"
+          hx-get="/posts?skip={{ next_skip }}&search={{ search | urlencode }}{% if owner_id %}&owner_id={{ owner_id }}{% endif %}"
+          hx-target="this" hx-swap="outerHTML" hx-disabled-elt="this">
+    <span class="spinner" aria-hidden="true"></span><span>Carregar mais</span>
+  </button>
+{% endif %}

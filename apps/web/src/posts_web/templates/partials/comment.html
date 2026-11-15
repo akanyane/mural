@@ -1,0 +1,18 @@
+{% import "partials/icons.html" as icon %}
+<li id="comment-{{ comment.id }}" class="comment">
+  <a href="/u/{{ comment.owner.username }}" class="avatar-link" tabindex="-1" aria-hidden="true">
+    {%- with name = comment.owner.username, size = "sm" %}{% include "partials/avatar.html" %}{% endwith -%}
+  </a>
+  <div class="comment-body">
+    <div class="comment-meta">
+      <a href="/u/{{ comment.owner.username }}" class="comment-author">{{ comment.owner.username }}</a>
+      <time datetime="{{ comment.created_at.isoformat() }}" title="{{ comment.created_at | datetime }}">{{ comment.created_at | timeago }}</time>
+    </div>
+    <p class="comment-text">{{ comment.content }}</p>
+  </div>
+  {% if me and me.id in (comment.owner_id, post_owner_id) %}
+    <button class="icon-btn icon-btn-danger icon-btn-sm" title="Apagar comentário" aria-label="Apagar comentário"
+            hx-delete="/posts/{{ post_id }}/comments/{{ comment.id }}" hx-target="#comment-{{ comment.id }}"
+            hx-swap="outerHTML swap:250ms" hx-confirm="Apagar este comentário?">{{ icon.trash() }}</button>
+  {% endif %}
+</li>

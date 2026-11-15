@@ -1,0 +1,56 @@
+{% import "partials/icons.html" as icon %}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  {#- Por padrão o htmx não faz swap de respostas 4xx/5xx. Aqui elas fazem swap
+      (o servidor redireciona erros para #flash via HX-Retarget). -#}
+  <meta name="htmx-config" content='{"responseHandling": [{"code": "204", "swap": false}, {"code": "[23]..", "swap": true}, {"code": "[45]..", "swap": true, "error": true}, {"code": "...", "swap": false}]}'>
+  <title>{% block title %}Mural{% endblock %}</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='30' height='30' fill='%23ff5b2e'/%3E%3Crect x='6' y='7' width='12' height='12' fill='%23fff'/%3E%3Crect x='14' y='13' width='12' height='12' fill='%231a1714'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Inter:wght@400..700&family=JetBrains+Mono:wght@500;700&display=swap">
+  <link rel="stylesheet" href="/static/style.css">
+  {#- Aplica o tema salvo antes da primeira pintura (evita "piscar" claro→escuro). -#}
+  <script>try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch (_) {}</script>
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body hx-indicator="#progress" hx-on::before-request="document.getElementById('flash').replaceChildren()">
+  <div id="progress" class="progress htmx-indicator" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="/" class="brand" aria-label="Mural, página inicial">{{ icon.logo() }}<span>Mural</span></a>
+      <nav class="topbar-actions">
+        <button type="button" class="icon-btn" data-theme-toggle aria-label="Alternar tema claro/escuro">
+          {{ icon.moon("only-light") }}{{ icon.sun("only-dark") }}
+        </button>
+        {% if me %}
+          <a class="me" href="/u/{{ me.username }}" title="Meu perfil">
+            {% with name = me.username, size = "sm" %}{% include "partials/avatar.html" %}{% endwith %}
+            <span class="me-email">@{{ me.username }}</span>
+          </a>
+          <form method="post" action="/logout" class="inline">
+            <button type="submit" class="icon-btn" aria-label="Sair" title="Sair">{{ icon.logout() }}</button>
+          </form>
+        {% else %}
+          {% block auth_links %}
+            <a href="/login" class="btn btn-ghost btn-sm">Entrar</a>
+            <a href="/register" class="btn btn-primary btn-sm">Criar conta</a>
+          {% endblock %}
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+
+  <main class="{% block main_class %}page{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
+
+  <div id="flash" class="toast-region" aria-live="polite"></div>
+</body>
+</html>

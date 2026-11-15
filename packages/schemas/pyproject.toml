@@ -1,0 +1,12 @@
+[project]
+name = "posts-schemas"
+version = "0.1.0"
+description = "Modelos Pydantic compartilhados entre a API e o frontend."
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic[email]>=2.14",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.12"]
+build-backend = "uv_build"

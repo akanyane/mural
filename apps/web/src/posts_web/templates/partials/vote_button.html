@@ -1,0 +1,7 @@
+{% import "partials/icons.html" as icon %}
+<button class="vote{% if item.voted %} is-voted{% endif %}{% if toggled %} pop{% endif %}"
+        hx-post="/posts/{{ item.Post.id }}/vote"
+        hx-vals='{"dir": {{ 0 if item.voted else 1 }}}'
+        hx-swap="outerHTML" hx-disabled-elt="this"
+        aria-pressed="{{ 'true' if item.voted else 'false' }}"
+        aria-label="{{ 'Remover voto' if item.voted else 'Votar' }}">{{ icon.arrow_up("vote-icon") }}<span class="vote-count">{{ item.votes }}</span></button>

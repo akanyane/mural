@@ -1,0 +1,18 @@
+{% import "partials/icons.html" as icon %}
+<section class="comments" aria-label="Comentários">
+  <ol id="comment-list-{{ post.id }}" class="comment-list">
+    {% for comment in comments %}
+      {% with post_id = post.id, post_owner_id = post.owner_id %}{% include "partials/comment.html" %}{% endwith %}
+    {% else %}
+      <li id="no-comments-{{ post.id }}" class="comment-empty">Nenhum comentário ainda. Seja o primeiro.</li>
+    {% endfor %}
+  </ol>
+  <form class="comment-form" hx-post="/posts/{{ post.id }}/comments"
+        hx-target="#comment-list-{{ post.id }}" hx-swap="beforeend"
+        hx-on::after-request="if (event.detail.successful) this.reset()">
+    {% with name = me.username, size = "sm" %}{% include "partials/avatar.html" %}{% endwith %}
+    <textarea name="content" rows="1" maxlength="1000" required aria-label="Comentário"
+              placeholder="Escreva um comentário…"></textarea>
+    <button type="submit" class="btn btn-primary btn-sm" aria-label="Comentar">{{ icon.send() }}<span>Comentar</span></button>
+  </form>
+</section>

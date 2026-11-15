@@ -1,0 +1,41 @@
+{% import "partials/icons.html" as icon %}
+{% set post = item.Post %}
+<article id="post-{{ post.id }}" class="post card" style="--i: {{ i | default(0) }}">
+  <header class="post-head">
+    <a href="/u/{{ post.owner.username }}" class="avatar-link" tabindex="-1" aria-hidden="true">
+      {%- with name = post.owner.username %}{% include "partials/avatar.html" %}{% endwith -%}
+    </a>
+    <div class="post-meta">
+      <a href="/u/{{ post.owner.username }}" class="post-author">{{ post.owner.username }}</a>
+      <span class="post-sub">
+        <span class="post-handle">@{{ post.owner.username }} · </span><time datetime="{{ post.created_at.isoformat() }}" title="{{ post.created_at | datetime }}">{{ post.created_at | timeago }}</time>
+      </span>
+    </div>
+    {% if not post.published %}<span class="badge">rascunho</span>{% endif %}
+  </header>
+
+  <h2 class="post-title">{{ post.title }}</h2>
+  <p class="post-content">{{ post.content }}</p>
+
+  <footer class="post-foot">
+    <div class="post-reactions">
+      {% include "partials/vote_button.html" %}
+      <button class="chip comment-toggle" data-comments-toggle
+              aria-expanded="false" aria-controls="comments-{{ post.id }}" aria-label="Comentários"
+              hx-get="/posts/{{ post.id }}/comments" hx-target="#comments-{{ post.id }}">
+        {{- icon.message() -}}
+        <span id="comment-count-{{ post.id }}" class="chip-count">{{ item.comments }}</span>
+      </button>
+    </div>
+    {% if me and me.id == post.owner_id %}
+      <div class="post-actions">
+        <button class="icon-btn" title="Editar" aria-label="Editar"
+                hx-get="/posts/{{ post.id }}/edit" hx-target="#post-{{ post.id }}" hx-swap="outerHTML">{{ icon.pencil() }}</button>
+        <button class="icon-btn icon-btn-danger" title="Apagar" aria-label="Apagar"
+                hx-delete="/posts/{{ post.id }}" hx-target="#post-{{ post.id }}" hx-swap="outerHTML swap:300ms"
+                hx-confirm="Apagar este post?">{{ icon.trash() }}</button>
+      </div>
+    {% endif %}
+  </footer>
+  <div id="comments-{{ post.id }}" class="comments-slot"></div>
+</article>
